@@ -1,0 +1,39 @@
+# Your own receiver list and its safety copies (created on first start from mac/servers.default.json)
+mac/servers.json
+mac/servers.json.bak
+mac/servers.json.corrupt-*
+mac/.servers_backups/
+mac/.servers.*.tmp
+
+# Downloaded at setup by mac/tools/fetch_kiwiclient.py (not redistributed here, see THIRD_PARTY_NOTICES.md)
+mac/vendor/
+
+# Python / macOS / editors
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+
+# Local build and test output
+build/
+out/
+firmware/tools/host_render/build/
+firmware/tools/host_render/out/
+*.log
+
+# Receiver Manager check history (your own check results, not for publishing)
+mac/check_history.json
+mac/check_history.json.corrupt-*
+mac/.check_history-*.tmp
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Hand-over notes between assistants (local only, not for publishing)
+HANDOFF_*.md
+
+# Temporary clearly-named real-device install candidate; remove after the Launcher test
+firmware/bin/RDSDR_v110_BOTH_BOLD.bin

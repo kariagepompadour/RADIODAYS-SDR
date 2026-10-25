@@ -1,0 +1,14 @@
+[
+  {"name": "Osaka, Japan (nr601sdrnet)", "short": "Osaka JP", "host": "nr601sdrnet.ddns.net", "port": 4400,
+   "lat": 34.8585, "lon": 135.5144,
+   "pos_source": "kiwisdr.com/public GNSS 34.858507,135.514421 (2026-10-23); the receiver's own config reported 34.86,135.51 on connect"},
+  {"name": "Rotorua, New Zealand (ZL1ROT)", "short": "Rotorua NZ", "host": "sdr.rogerh.co.nz", "port": 8073,
+   "lat": -38.1521, "lon": 176.0708,
+   "pos_source": "receiver /status gps=(-38.152087,176.070807) and kiwisdr.com/public (2026-10-23)"},
+  {"name": "Ironstone Range, South Australia", "short": "Ironstone AU", "host": "sdr.ironstonerange.com", "port": 8075,
+   "lat": -34.9644, "lon": 138.7624,
+   "pos_source": "receiver /status gps=(-34.964437,138.762380) and kiwisdr.com/public (2026-10-23)"},
+  {"name": "Ironstone Range #2, South Australia", "short": "Ironstone AU2", "host": "sdr.ironstonerange.com", "port": 8074,
+   "lat": -34.9644, "lon": 138.7624,
+   "pos_source": "same site as Ironstone AU: /status gps and kiwisdr.com/public agree (2026-10-23)"}
+]

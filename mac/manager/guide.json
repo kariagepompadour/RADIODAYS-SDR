@@ -1,0 +1,668 @@
+{
+ "version": "1.7",
+ "title": {
+  "ja": "操作ガイド",
+  "en": "Operation Guide"
+ },
+ "subtitle": {
+  "ja": "RADIO DAYS SDR 操作早見表（v1.7）",
+  "en": "RADIO DAYS SDR quick reference (v1.7)"
+ },
+ "intro": {
+  "ja": "Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳しい説明は docs/OPERATION_JA.md（日本語）にあります。",
+  "en": "A quick reference for the Cardputer ADV and the PC (Mac / Windows). More detail is in docs/OPERATION_JA.md (Japanese)."
+ },
+ "detail_doc": "docs/OPERATION_JA.md",
+ "sections": [
+  {
+   "id": "basic",
+   "title": {
+    "ja": "基本操作",
+    "en": "Basic operation"
+   },
+   "blocks": [
+    {
+     "type": "p",
+     "text": {
+      "ja": "使う順番: ① パソコンの起動ファイルをダブルクリック（Mac: Start RADIO DAYS Mac.command ／ Windows 11: Start RADIO DAYS Win.bat）→ ② Cardputer ADV の電源を入れ、初回は Wi-Fi を選んでパスワードを入力 → ③ 画面右上の WiFi / PC / Kiwi の灯が緑になるのを待つ（パソコンは自動で見つかります）。パソコンと Cardputer は同じ LAN に接続してください。",
+      "en": "Order of use: (1) double-click the start file for your computer (Mac: Start RADIO DAYS Mac.command / Windows 11: Start RADIO DAYS Win.bat), (2) switch the Cardputer ADV on and, the first time, pick a Wi-Fi and type its password, (3) wait for the WiFi / PC / Kiwi lamps at the top right to turn green (the computer is found automatically). The computer and the Cardputer must be on the same LAN."
+     }
+    },
+    {
+     "type": "keys",
+     "rows": [
+      {
+       "keys": [
+        {
+         "ja": "U135 回す",
+         "en": "Turn U135"
+        }
+       ],
+       "text": {
+        "ja": "MANUAL: 選択中の刻み幅で周波数を変える。AUTO: 回した方向へ自動で探す",
+        "en": "MANUAL: change the frequency by the selected tuning increment. AUTO: scan automatically in the direction you turn"
+       }
+      },
+      {
+       "keys": [
+        {
+         "ja": "U135 を押しながら回す",
+         "en": "Hold U135 and turn"
+        }
+       ],
+       "text": {
+        "ja": "音量 ±5",
+        "en": "volume ±5"
+       }
+      },
+      {
+       "keys": [
+        {
+         "ja": "U135 を短く押す",
+         "en": "Short press U135"
+        }
+       ],
+       "text": {
+        "ja": "ミュート（AUTO で探している間は探索を止める）",
+        "en": "mute (while AUTO is scanning it stops the scan instead)"
+       }
+      },
+      {
+       "keys": [
+        ";",
+        ".",
+        "+",
+        "-"
+       ],
+       "text": {
+        "ja": "音量 ±5（; と + が上げる、. と - が下げる）",
+        "en": "volume ±5 (; and + raise, . and - lower)"
+       }
+      },
+      {
+       "keys": [
+        "M"
+       ],
+       "text": {
+        "ja": "ミュート",
+        "en": "mute"
+       }
+      },
+      {
+       "keys": [
+        "1",
+        "2",
+        "3",
+        "4"
+       ],
+       "text": {
+        "ja": "選局の刻み幅を 0.1 / 1 / 5 / 10 kHz にする（右上の最下段に点灯表示）",
+        "en": "set the tuning increment to 0.1 / 1 / 5 / 10 kHz (shown by the bottom row of the upper-right panel)"
+       }
+      },
+      {
+       "keys": [
+        "F"
+       ],
+       "text": {
+        "ja": "周波数を数字で入力（ENTER で決定）",
+        "en": "type a frequency (ENTER to confirm)"
+       }
+      },
+      {
+       "keys": [
+        "A",
+        "U",
+        "L"
+       ],
+       "text": {
+        "ja": "モード AM / USB / LSB。モードを変更すると推奨刻み幅（AM = 5 kHz、USB/LSB = 1 kHz）になる。その後は 1〜4 で変更可能",
+        "en": "mode AM / USB / LSB. Changing mode selects its recommended increment (AM = 5 kHz; USB/LSB = 1 kHz); keys 1-4 can then override it"
+       }
+      },
+      {
+       "keys": [
+        "W"
+       ],
+       "text": {
+        "ja": "Wi-Fi の設定画面（一覧から選んでパスワードを入力）",
+        "en": "Wi-Fi setup (pick a network and type its password)"
+       }
+      },
+      {
+       "keys": [
+        "I"
+       ],
+       "text": {
+        "ja": "PC の IP アドレスを手入力（自動で見つからないとき。起動したウィンドウに表示された PC IP）",
+        "en": "type the PC's IP address by hand (when it is not found automatically; use the PC IP printed in the start window)"
+       }
+      },
+      {
+       "keys": [
+        "H"
+       ],
+       "text": {
+        "ja": "キー一覧（Cardputer の画面）",
+        "en": "key list (on the Cardputer screen)"
+       }
+      },
+      {
+       "keys": [
+        "D"
+       ],
+       "text": {
+        "ja": "診断画面（音切れの切り分け）",
+        "en": "diagnostics screen (to tell where drop-outs come from)"
+       }
+      }
+     ]
+    },
+    {
+     "type": "p",
+     "text": {
+      "ja": "※ , と / は周波数の − / ＋（MANUAL のとき）です。画面の SIGNAL メーターは KiwiSDR が報告した受信強度、VOL メーターは「設定値」で実際の音の大きさではありません。",
+      "en": "Note: , and / lower / raise the frequency (in MANUAL). The SIGNAL meter is the signal strength the KiwiSDR reports; the VOL meter shows the setting, not the actual sound level."
+     }
+    }
+   ]
+  },
+  {
+   "id": "receiver",
+   "title": {
+    "ja": "受信機（KiwiSDR）の選択",
+    "en": "Choosing a receiver (KiwiSDR)"
+   },
+   "blocks": [
+    {
+     "type": "keys",
+     "rows": [
+      {
+       "keys": [
+        "G"
+       ],
+       "text": {
+        "ja": "地球儀を開く（開くたびに PC から最新の一覧を取得）",
+        "en": "open the globe (it fetches the current list from the PC each time)"
+       }
+      },
+      {
+       "keys": [
+        {
+         "ja": "U135 を回す",
+         "en": "Turn U135"
+        },
+        ";",
+        ".",
+        ",",
+        "/"
+       ],
+       "text": {
+        "ja": "地球儀の中で受信機を順に選ぶ（選んだ地点が正面に回る）",
+        "en": "choose receivers in turn inside the globe (the chosen place turns to the front)"
+       }
+      },
+      {
+       "keys": [
+        "ENTER",
+        {
+         "ja": "U135 を短く押す",
+         "en": "Short press U135"
+        }
+       ],
+       "text": {
+        "ja": "選んだ受信機への接続を PC に要求",
+        "en": "ask the PC to connect to the chosen receiver"
+       }
+      },
+      {
+       "keys": [
+        "Esc",
+        "`"
+       ],
+       "text": {
+        "ja": "何も変えずに地球儀を閉じる",
+        "en": "close the globe without changing anything"
+       }
+      },
+      {
+       "keys": [
+        "N",
+        "P"
+       ],
+       "text": {
+        "ja": "地球儀を開かずに、一覧の次 / 前の受信機へ",
+        "en": "go to the next / previous receiver in the list without opening the globe"
+       }
+      }
+     ]
+    },
+    {
+     "type": "list",
+     "items": [
+      {
+       "ja": "一覧の中身と順番は Receiver Manager で決めます（下の「Receiver Manager の使い方」）。保存したあと、Cardputer で G をもう一度押すと新しい一覧になります。",
+       "en": "The contents and order of the list are set in the Receiver Manager (see below). After saving, press G again on the Cardputer to see the new list."
+      },
+      {
+       "ja": "地球儀の黄色の点は登録された受信機、赤＋白の点は選択中、リングは使用中（緑 = 受信中、橙 = 接続中、赤 = 失敗）です。位置が未登録の受信機には点が出ませんが、選択・接続はできます。",
+       "en": "On the globe a yellow dot is a registered receiver, red + white is the selected one, and a ring marks the one in use (green = receiving, orange = connecting, red = failed). A receiver without a position has no dot but can still be selected and connected."
+      },
+      {
+       "ja": "要求した受信機に繋がらないときは、PC が自動で次の受信機へ切り替えます。",
+       "en": "If the requested receiver cannot be reached, the PC switches to the next one automatically."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "scan",
+   "title": {
+    "ja": "MANUAL / AUTO 選局",
+    "en": "MANUAL / AUTO tuning"
+   },
+   "blocks": [
+    {
+     "type": "keys",
+     "rows": [
+      {
+       "keys": [
+        "Tab",
+        "T"
+       ],
+       "text": {
+        "ja": "MANUAL ⇄ AUTO を切り替える（起動時は MANUAL。保存されません）",
+        "en": "switch MANUAL ⇄ AUTO (it starts in MANUAL and is not saved)"
+       }
+      },
+      {
+       "keys": [
+        {
+         "ja": "U135 を回す",
+         "en": "Turn U135"
+        }
+       ],
+       "text": {
+        "ja": "AUTO: 回した方向（右 = 高い方、左 = 低い方）へ探し、受信できそうな信号で止まる",
+        "en": "AUTO: scan in the direction you turn (right = up, left = down) and stop at a signal that looks receivable"
+       }
+      },
+      {
+       "keys": [
+        "Esc",
+        "`",
+        {
+         "ja": "U135 を押す",
+         "en": "Push U135"
+        }
+       ],
+       "text": {
+        "ja": "探索を止める",
+        "en": "stop the scan (Esc, or push U135)"
+       }
+      }
+     ]
+    },
+    {
+     "type": "list",
+     "items": [
+      {
+       "ja": "止まったあと同じ方向にもう一度回すと、その信号を飛ばして次を探します。反対に回すと向きが反転します。",
+       "en": "Turn the same way again after it stops to skip that signal and look for the next; turn the other way to reverse."
+      },
+      {
+       "ja": "探す刻みは 5 kHz 以上です。1 ステップあたり約 1.4〜1.5 秒（実際の KiwiSDR での測定）かかります。細かい調整は止まったあと MANUAL で行います。",
+       "en": "The scan step is 5 kHz or more and takes about 1.4-1.5 s per step (measured on real KiwiSDR receivers). Fine-tune in MANUAL after it stops."
+      },
+      {
+       "ja": "帯域の端では END OF BAND、KiwiSDR との接続が切れると SCAN ENDED: KIWI LINK LOST と表示して終わります。",
+       "en": "At the band edge it shows END OF BAND; if the KiwiSDR link is lost it ends with SCAN ENDED: KIWI LINK LOST."
+      },
+      {
+       "ja": "受信状態はフェージングで変わるので、止まった信号が後で弱くなることがあります。",
+       "en": "Reception fades, so a signal it stopped on may be weaker a little later."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "output",
+   "title": {
+    "ja": "音声出力の切り替え",
+    "en": "Switching the audio output"
+   },
+   "blocks": [
+    {
+     "type": "keys",
+     "rows": [
+      {
+       "keys": [
+        "O"
+       ],
+       "text": {
+        "ja": "音声の出力先を PC スピーカー ⇄ Cardputer スピーカーに切り替える（選択は保存され、再起動後も復元）",
+        "en": "switch the audio output between the PC speaker and the Cardputer speaker (the choice is saved and restored after a restart)"
+       }
+      }
+     ]
+    },
+    {
+     "type": "list",
+     "items": [
+      {
+       "ja": "画面右上に OUT PC（PC スピーカー）と OUT ADV（Cardputer スピーカー）が並び、使っている方のランプが点灯します。同時には鳴りません。音量とミュートはどちらでも同じ操作です。",
+       "en": "OUT PC (PC speaker) and OUT ADV (Cardputer speaker) are both shown at the top right; the lamp of the one in use is lit. They never play at the same time. Volume and mute work the same for both."
+      },
+      {
+       "ja": "OUT ADV で鳴り始めるまでは、下部の黒緑液晶の状態行に ADV audio: waiting for PC / connecting / buffering / reconnecting / no memory のいずれかが出ます。メモリが足りないときは自動で PC スピーカーのままになります。",
+       "en": "Until OUT ADV starts playing, the lower black-and-green status line shows ADV audio: waiting for PC / connecting / buffering / reconnecting / no memory. If memory is short it stays on the PC speaker automatically."
+      },
+      {
+       "ja": "Cardputer が止まっている間、PC は自動では鳴りません（突然鳴らないため）。",
+       "en": "While the Cardputer is down the PC does not start playing by itself (so it never surprises you)."
+      },
+      {
+       "ja": "音量の感じ方は実機で聴いて調整してください。",
+       "en": "Judge the loudness by ear on the real device."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "manager",
+   "title": {
+    "ja": "Receiver Manager の使い方",
+    "en": "Using the Receiver Manager"
+   },
+   "blocks": [
+    {
+     "type": "p",
+     "text": {
+      "ja": "起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）を開くと、ブラウザで Receiver Manager が自動的に開きます（起動のたびに毎回）。開かないとき・閉じたあとは、同じパソコンのブラウザで http://127.0.0.1:8780/ を開きます。ブラウザを閉じてもラジオは止まりません（止めるのは、起動したウィンドウで Ctrl+C）。ラジオを使うときは起動ファイルだけで足ります。「Open Receiver Manager Mac.command」/「Open Receiver Manager Win.bat」は、ラジオを起動せずに一覧だけ編集したいとき用で、すでに動いていれば既存の画面を開きます。この画面はそのパソコンの中だけで動き、他の端末からは開けません。",
+      "en": "Opening the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) opens the Receiver Manager in your browser by itself, every time. If it did not open, or after you closed it, open http://127.0.0.1:8780/ in a browser on the same computer. Closing the browser does not stop the radio (press Ctrl+C in the window that started it). For listening the start file alone is enough. \"Open Receiver Manager Mac.command\" / \"Open Receiver Manager Win.bat\" is only for editing the list without starting the radio; if a Receiver Manager is already running it opens the existing page. The page runs only on that computer and cannot be opened from other devices."
+     }
+    },
+    {
+     "type": "list",
+     "items": [
+      {
+       "ja": "登録（左）: ≡ のドラッグか ↑↓ で並べ替え、× で登録解除。名前・短い名前・ホスト・ポート・緯度経度はその場で編集できます。この順番が地球儀の一覧の順番です（最大 32 台）。",
+       "en": "Registered (left): reorder with the ≡ handle or ↑↓, unregister with ×. Name, short name, host, port and latitude/longitude can be edited in place. This order is the order of the globe list (up to 32)."
+      },
+      {
+       "ja": "候補（右）: 公開 KiwiSDR 一覧のスナップショットです。チェックを入れると登録、外すと解除。検索、「日本のみ」、国、登録済み/未登録で絞り込めます。候補が今接続できるかどうかは分かりません。",
+       "en": "Candidates (right): a snapshot of the public KiwiSDR list. Tick to register, untick to unregister. Search, \"Japan only\", country and registered/unregistered filters are available. Whether a candidate can be reached now is unknown."
+      },
+      {
+       "ja": "手動で追加: ホスト名とポートを直接指定します（自分の KiwiSDR など）。",
+       "en": "Add by hand: give a host name and port directly (for example your own KiwiSDR)."
+      },
+      {
+       "ja": "保存して反映: 入力を検査してから保存し、動作中のプログラムにもすぐ読み込ませます。直前の保存は servers.json.bak と .servers_backups/（10 世代）に残り、「直前の保存に戻す」で戻せます。変更を破棄すると画面を開いたときの状態に戻ります。",
+       "en": "Save and apply: the input is validated, saved, and loaded into the running program at once. The previous save stays in servers.json.bak and .servers_backups/ (10 generations); \"Restore previous save\" goes back. \"Discard changes\" returns to the state when the page was opened."
+      },
+      {
+       "ja": "反映後、Cardputer で G をもう一度押すと新しい一覧が見えます。使用中の受信機を外して保存すると、先頭の受信機に切り替わります。",
+       "en": "After saving, press G on the Cardputer again to see the new list. If you remove the receiver in use and save, the first receiver is connected instead."
+      }
+     ]
+    },
+    {
+     "type": "h",
+     "text": {
+      "ja": "確認ボタンと確認履歴",
+      "en": "Check buttons and check history"
+     }
+    },
+    {
+     "type": "list",
+     "items": [
+      {
+       "ja": "HTTP確認: 受信機の Web サーバーが /status に答えるかだけを調べます（1 回の問い合わせ）。音声が受信できるかは分かりません。",
+       "en": "HTTP check: only asks whether the receiver's web server answers /status (one request). It does not show that audio can be received."
+      },
+      {
+       "ja": "音声確認（約 7 秒）: 実際に接続して音声ブロックが届くか調べます。相手の受信機の枠を一時的に 1 つ使うので、必要なときに 1 台ずつ押してください。一括実行はありません。",
+       "en": "Audio check (~7 s): really connects and shows whether audio blocks arrive. It uses one user slot of that receiver briefly, so press it one receiver at a time when needed. There is no bulk run."
+      },
+      {
+       "ja": "結果は「前回の確認」として日時つきで保存され、ブラウザを閉じて開き直しても、PC側プログラムを再起動しても表示されます（check_history.json）。HTTP確認と音声確認は別々に記録されます。未確認のものは「未確認」と表示されます。",
+       "en": "Each result is saved with its date and time as the \"last check\" and is shown again after closing the browser or restarting the PC-side program (check_history.json). HTTP and audio checks are recorded separately; anything not yet checked shows \"not checked\"."
+      },
+      {
+       "ja": "「応答あり」「音声受信を確認」は、その日時の結果です。いま接続できることを保証するものではありません（公開受信機は混雑や停止で状況が変わります）。",
+       "en": "\"Answers\" and \"audio received\" are the result at that date and time. They do not guarantee a connection now (public receivers get busy or go offline)."
+      },
+      {
+       "ja": "画面を開いただけでは何も問い合わせません。「登録済みをHTTP再確認」「表示中の候補をHTTP一括確認」は押したときだけ動き、確認前に台数を示して承認を求めます。同時に問い合わせるのは最大 4 台で、途中で中止できます。",
+       "en": "Opening the page asks nothing. \"Re-check registered (HTTP)\" and \"Check shown candidates (HTTP)\" run only when pressed, show the number of receivers and ask for confirmation first, query at most 4 at a time, and can be stopped midway."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lamps",
+   "title": {
+    "ja": "右上の5段状態表示",
+    "en": "The five-row status panel"
+   },
+   "blocks": [
+    {
+     "type": "p",
+     "text": {
+      "ja": "右上の白いパネルは、上から ① OUT PC / OUT ADV、② WiFi / PC / Kiwi、③ MANUAL / AUTO、④ AM / USB / LSB、⑤ 0.1 / 1 / 5 / 10 kHz です。通信の3灯だけは緑=正常、黄=接続中、赤=異常、暗い=未確認。それ以外は選択中がアンバー、非選択が暗色です。",
+      "en": "The white panel at the upper right has five rows: (1) OUT PC / OUT ADV, (2) WiFi / PC / Kiwi, (3) MANUAL / AUTO, (4) AM / USB / LSB, and (5) 0.1 / 1 / 5 / 10 kHz. Only the three link lamps use traffic-light colours: green=healthy, yellow=connecting, red=error, dark=unknown. In the other rows amber means selected and dark means not selected."
+     }
+    },
+    {
+     "type": "table",
+     "head": [
+      {
+       "ja": "灯",
+       "en": "Lamp"
+      },
+      {
+       "ja": "緑",
+       "en": "Green"
+      },
+      {
+       "ja": "黄",
+       "en": "Yellow"
+      },
+      {
+       "ja": "赤",
+       "en": "Red"
+      },
+      {
+       "ja": "灰",
+       "en": "Grey"
+      }
+     ],
+     "rows": [
+      [
+       {
+        "ja": "WiFi",
+        "en": "WiFi"
+       },
+       {
+        "ja": "Wi-Fi 接続中",
+        "en": "Wi-Fi connected"
+       },
+       {
+        "ja": "接続を試行中",
+        "en": "trying to connect"
+       },
+       {
+        "ja": "未接続",
+        "en": "not connected"
+       },
+       {
+        "ja": "—",
+        "en": "—"
+       }
+      ],
+      [
+       {
+        "ja": "PC",
+        "en": "PC"
+       },
+       {
+        "ja": "PC側プログラムが応答",
+        "en": "the PC-side program answers"
+       },
+       {
+        "ja": "Wi-Fi は繋がっているが PC が応答しない",
+        "en": "Wi-Fi is up but the PC does not answer"
+       },
+       {
+        "ja": "—",
+        "en": "—"
+       },
+       {
+        "ja": "Wi-Fi が未接続",
+        "en": "no Wi-Fi"
+       }
+      ],
+      [
+       {
+        "ja": "Kiwi",
+        "en": "Kiwi"
+       },
+       {
+        "ja": "KiwiSDR に接続して受信中",
+        "en": "connected to the KiwiSDR"
+       },
+       {
+        "ja": "接続中・再接続中",
+        "en": "connecting / reconnecting"
+       },
+       {
+        "ja": "接続エラー",
+        "en": "connection error"
+       },
+       {
+        "ja": "PC が応答していない（K は判定できない）",
+        "en": "the PC does not answer (K cannot be known)"
+       }
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "trouble",
+   "title": {
+    "ja": "接続トラブルへの対処",
+    "en": "When the connection does not work"
+   },
+   "blocks": [
+    {
+     "type": "p",
+     "text": {
+      "ja": "下部の黒緑液晶の状態行と、画面右上の WiFi / PC / Kiwi の灯で、どこで止まっているかを切り分けます。上から順に確認してください。",
+      "en": "The status line in the lower black-and-green display and the WiFi / PC / Kiwi lamps at the upper right show where it is stuck. Check in this order."
+     }
+    },
+    {
+     "type": "table",
+     "head": [
+      {
+       "ja": "症状",
+       "en": "Symptom"
+      },
+      {
+       "ja": "考えられること / 対処",
+       "en": "What it may be / what to do"
+      }
+     ],
+     "rows": [
+      [
+       {
+        "ja": "W が赤・黄 / 状態行 Wi-Fi: …",
+        "en": "W red or yellow / status line Wi-Fi: …"
+       },
+       {
+        "ja": "Cardputer が Wi-Fi に繋がっていない。W キーで Wi-Fi を選び直す。",
+        "en": "The Cardputer is not on Wi-Fi. Press W and choose the network again."
+       }
+      ],
+      [
+       {
+        "ja": "P が黄 / PC: searching… / PC: connect failed",
+        "en": "P yellow / PC: searching… / PC: connect failed"
+       },
+       {
+        "ja": "パソコンのプログラムが動いていない、パソコンの IP が違う、または別のネットワーク。起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）が動いているか確認し、I キーで、起動したウィンドウに表示された PC IP を入力。ゲスト Wi-Fi など端末間通信を禁止するネットワークは使えません。ファイアウォールの許可ダイアログ（Windows では「プライベート ネットワーク」を許可）が出たら許可します。",
+        "en": "The PC-side program is not running, the IP is wrong, or the devices are on different networks. Check that the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) is running and press I to type the PC IP shown in its window. Guest Wi-Fi that blocks device-to-device traffic does not work. Allow the firewall dialog if it appears (on Windows allow \"Private networks\")."
+       }
+      ],
+      [
+       {
+        "ja": "3 秒以上応答がなく PC NOT CONNECTED の画面になる",
+        "en": "after 3+ s of silence the screen shows PC NOT CONNECTED"
+       },
+       {
+        "ja": "原因は断定できません（PC側、IP の誤り、ネットワークのどれでも同じ表示）。最後の 2 行のエラー内容と PC IP が手掛かりです。PC が応答すると自動で通常画面に戻ります。",
+        "en": "The cause cannot be told (PC side, wrong IP or network look the same). The last two lines (error text and PC IP) are the clue. The normal screen returns by itself once the PC answers."
+       }
+      ],
+      [
+       {
+        "ja": "P は緑で K が黄・赤 / Kiwi: <エラー>",
+        "en": "P green but K yellow or red / Kiwi: <error>"
+       },
+       {
+        "ja": "PC側プログラムは動いているが KiwiSDR に繋がらない（満員、停止、パスワード、同じ IP からの 2 本目の拒否など）。自動で次の受信機へ切り替わります。N / P で手動切替、または G で別の受信機を選びます。同じ受信機に 2 つのプログラムから同時に繋がないでください。",
+        "en": "The PC-side program runs but the KiwiSDR cannot be reached (full, offline, password, a second connection from the same IP refused, ...). It moves to the next receiver by itself; use N / P, or G to pick another. Do not connect two programs to the same receiver at once."
+       }
+      ],
+      [
+       {
+        "ja": "繋がっているのに音が出ない",
+        "en": "connected but no sound"
+       },
+       {
+        "ja": "OUT PC / OUT ADV、音量、ミュートを確認。OUT PC なら PC の出力先（--sound-device）、OUT ADV なら状態行の ADV audio: … を見る。D キーの診断画面で音切れの原因が Wi-Fi か Cardputer かを切り分けられます。",
+        "en": "Check OUT PC / OUT ADV, volume and mute. For OUT PC check the PC's output device (--sound-device); for OUT ADV read ADV audio: … in the status line. The D screen tells whether drop-outs come from Wi-Fi or the Cardputer."
+       }
+      ],
+      [
+       {
+        "ja": "Receiver Manager が開かない / 「PC側プログラムに接続できません」",
+        "en": "the Receiver Manager does not open / \"Cannot reach the PC-side program\""
+       },
+       {
+        "ja": "起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat、または Open Receiver Manager Mac.command / Open Receiver Manager Win.bat）が動いているか確認し、同じパソコンのブラウザで http://127.0.0.1:8780/ を開く。別の端末や Cardputer からは開けません。--manager-port 0 で起動していると無効です。起動したウィンドウに「Receiver Manager は使えません」と出ているときは、ポート 8780 を別のプログラムが使っています（表示された確認コマンドで調べるか、--manager-port で別の番号を指定）。",
+        "en": "Check that the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat, or Open Receiver Manager Mac.command / Open Receiver Manager Win.bat) is running and open http://127.0.0.1:8780/ in a browser on the same computer. It cannot be opened from other devices. It is off when started with --manager-port 0. If its window says \"Receiver Manager is NOT available\", another program uses port 8780 (find it with the check command shown, or give --manager-port another number)."
+       }
+      ],
+      [
+       {
+        "ja": "保存した一覧が Cardputer に出ない",
+        "en": "the saved list does not appear on the Cardputer"
+       },
+       {
+        "ja": "Cardputer で G をもう一度押す（開くたびに最新を取得）。Receiver Manager で保存が成功したか、画面上部の「未保存の変更」が消えているかを確認。",
+        "en": "Press G on the Cardputer again (it fetches the list each time it opens). In the Receiver Manager check that saving succeeded and that \"unsaved changes\" is gone."
+       }
+      ],
+      [
+       {
+        "ja": "「応答あり」なのに受信できない",
+        "en": "\"answers\" but cannot receive"
+       },
+       {
+        "ja": "HTTP確認は Web サーバーの応答だけの確認で、前回の時点の結果です。音声確認を 1 台だけ試すか、混雑・パスワード・時間制限を疑ってください。",
+        "en": "The HTTP check only shows that the web server answered, at that earlier time. Try the audio check on that one receiver, and suspect crowding, a password or a time limit."
+       }
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

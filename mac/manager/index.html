@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RADIO DAYS SDR - Receiver Manager</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="titleblock">
+    <h1>RADIO DAYS SDR <span class="sub">Receiver Manager</span></h1>
+    <p class="muted" data-i18n="intro"></p>
+  </div>
+  <div class="tools">
+    <a id="guide" class="linkbtn" href="/guide.html" target="_blank" rel="noopener" data-i18n="guide"></a>
+    <button id="lang" class="ghost" type="button" title="日本語 / English">日本語 / EN</button>
+  </div>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<div class="bar">
+  <div class="fileinfo"><span class="mono" id="filename">servers.json</span> <span id="dirty" class="dirty" hidden data-i18n="unsaved"></span>
+    <span id="runinfo" class="muted"></span></div>
+  <div class="actions">
+    <button id="save" class="primary" type="button" data-i18n="save"></button>
+    <button id="discard" type="button" data-i18n="discard"></button>
+    <button id="restore" type="button" data-i18n="restore"></button>
+  </div>
+</div>
+
+<div id="bulkbar" class="bulk bulkbar" hidden>
+  <span id="bulktext"></span> <progress id="bulkprog" value="0" max="1"></progress>
+  <button id="bulkstop" type="button" class="small" data-i18n="bulk_stop"></button>
+</div>
+
+<main class="cols">
+  <section class="panel" id="registered-panel">
+    <h2><span data-i18n="registered"></span> <span id="regcount" class="count"></span></h2>
+    <p class="muted" data-i18n="registered_help"></p>
+    <p class="notice" data-i18n="history_note"></p>
+    <div class="bulk"><button id="bulkreg" type="button" class="small" data-i18n="bulk_reg"></button></div>
+    <div id="registered"></div>
+    <details class="manual">
+      <summary data-i18n="manual_add"></summary>
+      <form id="manualform" autocomplete="off">
+        <label><span data-i18n="f_host"></span><input name="host" required placeholder="example.ddns.net"></label>
+        <label><span data-i18n="f_port"></span><input name="port" type="number" min="1" max="65535" value="8073" required></label>
+        <label><span data-i18n="f_name"></span><input name="name" maxlength="43" placeholder="City, Country (label)"></label>
+        <label><span data-i18n="f_short"></span><input name="short" maxlength="20" placeholder="City CC"></label>
+        <label><span data-i18n="f_lat"></span><input name="lat" placeholder="35.68"></label>
+        <label><span data-i18n="f_lon"></span><input name="lon" placeholder="139.76"></label>
+        <button type="submit" data-i18n="add"></button>
+      </form>
+    </details>
+  </section>
+
+  <section class="panel" id="candidates-panel">
+    <h2><span data-i18n="candidates"></span> <span id="candcount" class="count"></span></h2>
+    <p class="notice" id="candnote"></p>
+    <p class="notice" data-i18n="history_note"></p>
+    <div class="filters">
+      <input id="q" type="search" data-i18n-placeholder="search">
+      <select id="country"></select>
+      <label class="chk"><input id="jponly" type="checkbox"> <span data-i18n="japan_only"></span></label>
+      <button id="bulkcand" type="button" class="small" data-i18n="bulk_cand"></button>
+      <select id="regfilter">
+        <option value="all" data-i18n="rf_all"></option>
+        <option value="reg" data-i18n="rf_reg"></option>
+        <option value="unreg" data-i18n="rf_unreg"></option>
+      </select>
+    </div>
+    <div class="tablewrap"><table id="cands"><thead><tr>
+      <th></th><th data-i18n="c_name"></th><th data-i18n="c_country"></th><th data-i18n="c_addr"></th>
+      <th data-i18n="c_pos"></th><th data-i18n="c_snr"></th><th data-i18n="c_check"></th></tr></thead><tbody></tbody></table></div>
+  </section>
+</main>
+
+<footer class="muted" data-i18n="footer"></footer>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>
