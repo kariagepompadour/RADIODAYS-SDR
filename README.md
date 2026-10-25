@@ -18,7 +18,7 @@ Listen to shortwave through public [KiwiSDR](http://kiwisdr.com/) receivers arou
 **M5Stack Cardputer ADV** (plus the **U135 rotary encoder**) as the remote control and a **Mac or a Windows 11 PC** as the engine.
 Includes a browser-based **Receiver Manager** to choose, order and edit the receivers shown on the Cardputer's globe.
 
-> **Status: hobby project. The v1.10 GUI has been flashed to a real Cardputer ADV and its appearance and main controls were approved by the author on 2026-10-25. The OS-neutral public build passed the full PC-side regression suite and awaits one final flash/boot check.**
+> **Status: hobby project. The v1.10 GUI has been flashed to a real Cardputer ADV and its appearance and main controls were approved by the author on 2026-10-25. The final OS-neutral public build passed the full PC-side regression suite and was installed on the device through Launcher (Wi-Fi) on 2026-10-25, where the knob tuning, volume, MANUAL/AUTO, globe screen and a 30-minute OUT ADV playback were confirmed by the author (by ear, not measured).**
 > **Windows 11 has been tried on one PC** (Windows 11, Python 3.12.10, with a real Cardputer ADV): start, Receiver Manager, Cardputer link, volume/mute/output switching and shutdown worked. Other Windows PCs and long runs are untested.
 > See [What is verified and what is not](#what-is-verified-and-what-is-not) before relying on anything. Linux is not supported or tested.
 
