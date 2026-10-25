@@ -84,6 +84,23 @@ Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の
 
 ## Cardputer ADV に書き込む
 
+**Cardputer ADV 単体ではSDR放送を受信できません。** 受信には、Macまたは
+Windows PC上で動作するRADIO DAYS SDRプログラム（Receiver Managerを含む）、
+そのPCからKiwiSDR受信機へ接続するためのインターネット接続、および
+CardputerとPC間のネットワーク接続が必要です。
+
+### M5Burnerでインストールする
+
+1. M5Burnerを開き、**`RADIO DAYS SDR`** を検索します。
+2. **RADIO DAYS SDR** を選択し、M5Burnerのインストール操作で
+   Cardputer ADVに書き込みます。
+
+RADIO DAYS SDRをインストールすると、Cardputer ADVに入っているLauncherや
+ほかのファームウェアが上書きされる場合があります。残しておきたいものを
+復元できるようにしてからインストールしてください。
+
+### 手動でインストールする
+
 コンパイル済みイメージは `firmware/bin/`（チェックサムは `SHA256SUMS.txt`）。ボード設定: M5Cardputer / Flash 8MB / Partition `default_8MB`。
 
 ```bash

@@ -84,6 +84,23 @@ Windows is kept awake while the radio runs.
 
 ## Install on the Cardputer ADV
 
+**The Cardputer ADV cannot receive SDR broadcasts by itself.** Listening requires
+the RADIO DAYS SDR program (including the Receiver Manager) running on a Mac or
+Windows PC, an internet connection from that computer to a KiwiSDR receiver,
+and a network connection between the Cardputer and the computer.
+
+### Install with M5Burner
+
+1. Open M5Burner and search for **`RADIO DAYS SDR`**.
+2. Select **RADIO DAYS SDR** and use M5Burner's installation controls to install
+   it on the Cardputer ADV.
+
+Installing RADIO DAYS SDR may overwrite Launcher or other firmware already
+installed on the Cardputer ADV. Before installing, make sure you can restore
+anything you want to keep.
+
+### Manual installation
+
 Prebuilt images are in `firmware/bin/` (checksums in `SHA256SUMS.txt`). Board settings used: M5Cardputer, flash 8 MB, partition scheme `default_8MB`.
 
 ```bash
