@@ -118,7 +118,7 @@ struct WiFiMore {};
 struct EspC { unsigned getFreeHeap(){return 123456;} unsigned getMinFreeHeap(){return 98000;} } ESP; static unsigned heap_caps_get_largest_free_block(int){return 65536;}
 #define MALLOC_CAP_8BIT 0
 static String macIP("192.168.1.23"); static uint32_t diagDrawMs=0;
-#define BUILD_TAG "SDR-1.10"
+#define BUILD_TAG "SDR-1.28"
 #include <new>
 #include "RadioDays_Types.h"
 static Screen screen=SC_RADIO; static bool screenDirty=true;
@@ -128,7 +128,10 @@ namespace lgfx { static uint8_t color332(int r,int g,int b){ return (uint8_t)((r
 struct SrvInfo { char shortName[22]; char name[44]; float lat, lon; bool hasPos; };
 static SrvInfo srvs[32]; static int srvCount=0; static volatile bool srvWant=false; static uint32_t srvRev=0, statusRev=0;
 static int wantServer=0; static uint32_t verServer=0; static bool macManual=false;
-struct FakeSerial { template<class... A> void printf(const char*,A...){} void println(const char*){} } Serial;
+struct FakeSerial { template<class... A> void printf(const char*,A...){} void println(const char*){} explicit operator bool() const { return true; } } Serial;
+// USB link (TinyUSB since SDR-1.26): the diagnostics screen reads the OTG frame counter and mount state
+static volatile bool usbPcOk=false; static volatile uint8_t reportedScreen=0; static volatile uint32_t usbMounts=1, usbUnmounts=0;
+struct FakeUsbOtg { uint32_t dsts=0; } USB0; struct FakeUsb { explicit operator bool() const { return true; } } USB;
 static bool analogReady=true; static volatile bool tuneAuto=false; static uint32_t autoHintUntil=0; static int wantScanDir=0; static uint32_t verScan=0; static uint32_t verFreq=1; static bool synced=true;
 // the other screens and handlers are not under test here: stubs
 static bool resultOk=false; static bool gKeyG=false, gKeyEsc=false, gKeyD=false;

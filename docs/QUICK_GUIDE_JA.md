@@ -2,13 +2,15 @@
 
 # RADIO DAYS SDR - 操作ガイド
 
-**RADIO DAYS SDR 操作早見表（v1.7）** · [English](QUICK_GUIDE_EN.md)
+**RADIO DAYS SDR 操作早見表** · [English](QUICK_GUIDE_EN.md)
 
 Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳しい説明は docs/OPERATION_JA.md（日本語）にあります。
 
 ## 基本操作
 
-使う順番: ① パソコンの起動ファイルをダブルクリック（Mac: Start RADIO DAYS Mac.command ／ Windows 11: Start RADIO DAYS Win.bat）→ ② Cardputer ADV の電源を入れ、初回は Wi-Fi を選んでパスワードを入力 → ③ 画面右上の WiFi / PC / Kiwi の灯が緑になるのを待つ（パソコンは自動で見つかります）。パソコンと Cardputer は同じ LAN に接続してください。
+> **最初にここから**
+>
+> **使う順番: ① パソコンの起動ファイルをダブルクリック（Mac: Start RADIO DAYS Mac.command ／ Windows 11: Start RADIO DAYS Win.bat）→ ② Cardputer ADV をUSB接続して電源を入れる。OUT PCもOUT ADVもUSBだけで利用でき、CardputerのWi-Fiは不要です。動作中にUSBを抜き挿ししてCABLE okへ戻らない場合は、USBを接続したままCardputerを再起動してください。**
 
 | キー・操作 | |
 |---|---|
@@ -20,7 +22,8 @@ Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳�
 | `1` `2` `3` `4` | 選局の刻み幅を 0.1 / 1 / 5 / 10 kHz にする（右上の最下段に点灯表示） |
 | `F` | 周波数を数字で入力（ENTER で決定） |
 | `A` `U` `L` | モード AM / USB / LSB。モードを変更すると推奨刻み幅（AM = 5 kHz、USB/LSB = 1 kHz）になる。その後は 1〜4 で変更可能 |
-| `W` | Wi-Fi の設定画面（一覧から選んでパスワードを入力） |
+| `W` | Wi-Fi設定画面を開いて再スキャン。一覧から接続先を選び、パスワードを入力する。接続に成功した場合だけ最大3件まで保存される（S=保存済み一覧、DEL=削除、X=保存内容を消さずWi-Fiを一時OFF/ON） |
+| `X` | Wi-Fi設定画面でWi-Fiを一時OFF/ON。保存済みSSIDとパスワードは消えない |
 | `I` | PC の IP アドレスを手入力（自動で見つからないとき。起動したウィンドウに表示された PC IP） |
 | `H` | キー一覧（Cardputer の画面） |
 | `D` | 診断画面（音切れの切り分け） |
@@ -37,6 +40,7 @@ Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳�
 | `Esc` `` ` `` | 何も変えずに地球儀を閉じる |
 | `N` `P` | 地球儀を開かずに、一覧の次 / 前の受信機へ |
 
+- 受信機一覧・位置・選局命令は PC との制御通信で運びます。USB接続だけで地点表示・選局・OUT PC・OUT ADVの再生ができます。Wi-FiはUSBを使わないときの代替経路です。Wi-Fiなし試験はW画面でXを押して一時OFFにします。
 - 一覧の中身と順番は Receiver Manager で決めます（下の「Receiver Manager の使い方」）。保存したあと、Cardputer で G をもう一度押すと新しい一覧になります。
 - 地球儀の黄色の点は登録された受信機、赤＋白の点は選択中、リングは使用中（緑 = 受信中、橙 = 接続中、赤 = 失敗）です。位置が未登録の受信機には点が出ませんが、選択・接続はできます。
 - 要求した受信機に繋がらないときは、PC が自動で次の受信機へ切り替えます。
@@ -67,7 +71,7 @@ Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳�
 
 ## Receiver Manager の使い方
 
-起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）を開くと、ブラウザで Receiver Manager が自動的に開きます（起動のたびに毎回）。開かないとき・閉じたあとは、同じパソコンのブラウザで http://127.0.0.1:8780/ を開きます。ブラウザを閉じてもラジオは止まりません（止めるのは、起動したウィンドウで Ctrl+C）。ラジオを使うときは起動ファイルだけで足ります。「Open Receiver Manager Mac.command」/「Open Receiver Manager Win.bat」は、ラジオを起動せずに一覧だけ編集したいとき用で、すでに動いていれば既存の画面を開きます。この画面はそのパソコンの中だけで動き、他の端末からは開けません。
+起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）を開くと、Receiver Manager がまだ起動していない場合だけブラウザで自動的に開きます。重ねて起動しても同じ画面のタブは増やしません。開かないとき・閉じたあとは、同じパソコンのブラウザで http://127.0.0.1:8780/ を開きます。ブラウザを閉じてもラジオは止まりません（止めるのは、起動したウィンドウで Ctrl+C）。ラジオを使うときは起動ファイルだけで足ります。「Open Receiver Manager Mac.command」/「Open Receiver Manager Win.bat」は、ラジオを起動せずに一覧だけ編集したいとき用です。この画面はそのパソコンの中だけで動き、他の端末からは開けません。
 
 - 登録（左）: ≡ のドラッグか ↑↓ で並べ替え、× で登録解除。名前・短い名前・ホスト・ポート・緯度経度はその場で編集できます。この順番が地球儀の一覧の順番です（最大 32 台）。
 - 候補（右）: 公開 KiwiSDR 一覧のスナップショットです。チェックを入れると登録、外すと解除。検索、「日本のみ」、国、登録済み/未登録で絞り込めます。候補が今接続できるかどうかは分かりません。
@@ -90,7 +94,7 @@ Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳�
 | 灯 | 緑 | 黄 | 赤 | 灰 |
 |---|---|---|---|---|
 | WiFi | Wi-Fi 接続中 | 接続を試行中 | 未接続 | — |
-| PC | PC側プログラムが応答 | Wi-Fi は繋がっているが PC が応答しない | — | Wi-Fi が未接続 |
+| PC | PC側プログラムが応答 | USBまたはWi-Fi経由でPCが応答しない | — | Wi-Fi が未接続（OUT ADVのみ問題） |
 | Kiwi | KiwiSDR に接続して受信中 | 接続中・再接続中 | 接続エラー | PC が応答していない（K は判定できない） |
 
 ## 接続トラブルへの対処
@@ -99,8 +103,8 @@ Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳�
 
 | 症状 | 考えられること / 対処 |
 |---|---|
-| W が赤・黄 / 状態行 Wi-Fi: … | Cardputer が Wi-Fi に繋がっていない。W キーで Wi-Fi を選び直す。 |
-| P が黄 / PC: searching… / PC: connect failed | パソコンのプログラムが動いていない、パソコンの IP が違う、または別のネットワーク。起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）が動いているか確認し、I キーで、起動したウィンドウに表示された PC IP を入力。ゲスト Wi-Fi など端末間通信を禁止するネットワークは使えません。ファイアウォールの許可ダイアログ（Windows では「プライベート ネットワーク」を許可）が出たら許可します。 |
+| W が赤・黄 / 状態行 Wi-Fi: … | Cardputer が Wi-Fi に繋がっていない。OUT PC＋USB制御なら正常です。OUT ADVで音を出すときだけ、WキーでWi-Fiを設定します。 |
+| P が黄 / PC: searching… / PC: connect failed | パソコンのプログラムが動いていない、USBが外れている、またはWi-Fi経路のIP・ネットワークが違います。まず起動ファイルとUSBを確認します。Wi-Fi制御を使う場合はIキーでPC IPを入力し、ファイアウォールではプライベートネットワークを許可します。 |
 | 3 秒以上応答がなく PC NOT CONNECTED の画面になる | 原因は断定できません（PC側、IP の誤り、ネットワークのどれでも同じ表示）。最後の 2 行のエラー内容と PC IP が手掛かりです。PC が応答すると自動で通常画面に戻ります。 |
 | P は緑で K が黄・赤 / Kiwi: <エラー> | PC側プログラムは動いているが KiwiSDR に繋がらない（満員、停止、パスワード、同じ IP からの 2 本目の拒否など）。自動で次の受信機へ切り替わります。N / P で手動切替、または G で別の受信機を選びます。同じ受信機に 2 つのプログラムから同時に繋がないでください。 |
 | 繋がっているのに音が出ない | OUT PC / OUT ADV、音量、ミュートを確認。OUT PC なら PC の出力先（--sound-device）、OUT ADV なら状態行の ADV audio: … を見る。D キーの診断画面で音切れの原因が Wi-Fi か Cardputer かを切り分けられます。 |

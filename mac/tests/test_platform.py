@@ -105,7 +105,8 @@ class SharedCodeIsPortable(unittest.TestCase):
                 for n, line in enumerate(fh, 1):
                     m = re.search(r"(?<!os\.)\bopen\(", line)
                     if m and "'rb'" not in line and "'wb'" not in line and 'encoding' not in line and 'def open' not in line \
-                            and 'webbrowser' not in line and 'self.sink' not in line and 'rec.open' not in line and 'urlopen' not in line:
+                            and 'webbrowser' not in line and 'self.sink' not in line and 'rec.open' not in line and 'urlopen' not in line \
+                            and 'port.open' not in line:  # pyserial opens a serial port, not a text file
                         self.fail('%s:%d open() without encoding: %s' % (f, n, line.strip()))
 
     def test_servers_are_not_written_through_a_unix_path_assumption(self):

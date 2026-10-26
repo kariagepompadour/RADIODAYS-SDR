@@ -41,7 +41,11 @@ def render(guide, lang):
         for b in s['blocks']:
             t = b['type']
             if t == 'p':
-                out += [tx(b['text'], lang), '']
+                if b.get('emphasis') == 'start':
+                    label = '最初にここから' if lang == 'ja' else 'START HERE'
+                    out += ['> **' + label + '**', '>', '> **' + tx(b['text'], lang) + '**', '']
+                else:
+                    out += [tx(b['text'], lang), '']
             elif t == 'h':
                 out += ['### ' + tx(b['text'], lang), '']
             elif t == 'list':

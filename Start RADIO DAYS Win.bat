@@ -1,6 +1,6 @@
 @echo off
 rem RADIO DAYS SDR - Windows 11 launcher: double-click this file.
-rem Starts the radio and opens the Receiver Manager (http://127.0.0.1:8780/) in your browser every time.
+rem Starts the radio and opens one Web Controller page (http://127.0.0.1:8780/guide.html); repeated starts do not add duplicate tabs.
 rem Closing the browser does not stop the radio; close this window or press Ctrl+C to stop it.
 rem (Messages in this file are plain English on purpose: batch files and Japanese text do not mix reliably.)
 setlocal EnableExtensions
@@ -21,6 +21,9 @@ if errorlevel 1 goto :venvfail
 if errorlevel 1 goto :pipfail
 
 :havevenv
+"%VPY%" -c "import serial" >nul 2>nul
+if errorlevel 1 "%VPY%" -m pip install -q -r requirements.txt
+if errorlevel 1 goto :pipfail
 if exist "vendor\kiwiclient\kiwi\__init__.py" goto :havekiwi
 echo Fetching the KiwiSDR client library (pinned version, SHA-256 checked)...
 "%VPY%" tools\fetch_kiwiclient.py

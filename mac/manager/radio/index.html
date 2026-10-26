@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#11120f"><title>RADIO DAYS SDR - Web Controller</title><link rel="stylesheet" href="/radio/style.css"></head>
+<body><main class="page">
+<nav><a href="/">RECEIVER MANAGER</a><a href="/guide.html">WEB CONTROLLER</a><a href="/guide-details.html">OPERATION GUIDE</a><span id="connection">CONNECTING</span></nav>
+<section class="panel"><h1>WEB CONTROLLER</h1><p>This page is a live Cardputer mirror, PC remote control and operation guide. It also works without a Cardputer.</p><div class="primary"><button id="engine" disabled><i></i><b>RADIO ENGINE</b></button><button id="receiverOpen" class="receiver-status" type="button" aria-label="Open the Globe receiver chooser, same as the G key"><span>RECEIVER</span><b id="receiverName">—</b><small>CLICK TO CHOOSE ON GLOBE — SAME AS G</small></button></div><p class="receiver-edit-hint">To add, remove, or reorder receivers, use <a href="/">RECEIVER MANAGER</a>.</p></section>
+<div class="operation-layout">
+<section class="device-stage"><div class="display"><canvas id="screen" width="240" height="135" aria-label="Live RADIO DAYS SDR display"></canvas><div class="globe-controls" id="globeControls" hidden><button data-globe="back">ESC</button><button data-globe="prev">←</button><button data-globe="connect">ENTER</button><button data-globe="next">→</button></div><div class="globe-controls diagnostic-controls" id="diagnosticControls" hidden><button data-diagnostic="back">ESC · BACK</button></div></div></section>
+<section class="panel"><h2>KEYBOARD &amp; TOUCH CONTROLS</h2><p>Turn the jog dial, press a computer key or tap a button. The physical Cardputer and this page stay synchronized.</p><div class="keys">
+<div><button data-action="down">←</button><span>Frequency −</span></div><div><button data-action="up">→</button><span>Frequency +</span></div>
+<div><button data-action="vol-down">.</button><span>Volume −5</span></div><div><button data-action="vol-up">;</button><span>Volume +5</span></div>
+<div><button data-action="mute">M</button><span>Mute ON / OFF</span></div><div><button data-action="auto">T</button><span>MANUAL / AUTO</span></div>
+<div><button data-action="am">A</button><span>AM</span></div><div><button data-action="usb">U</button><span>USB</span></div>
+<div><button data-action="lsb">L</button><span>LSB</span></div><div><button data-action="stop">Esc</button><span>Back / cancel / stop AUTO scan</span></div>
+<div><button data-action="step-01">1</button><span>0.1 kHz step</span></div><div><button data-action="step-1">2</button><span>1 kHz step</span></div>
+<div><button data-action="step-5">3</button><span>5 kHz step</span></div><div><button data-action="step-10">4</button><span>10 kHz step</span></div>
+<div><button data-action="next">N</button><span>Next KiwiSDR</span></div><div><button data-action="prev">P</button><span>Previous KiwiSDR</span></div>
+<div><button data-action="globe">G</button><span>Globe receiver chooser</span></div><div><button data-action="output">O</button><span>Switch PC / Cardputer audio</span></div>
+<div><button data-action="direct">F</button><span>Enter frequency directly</span></div><div><button data-action="wifi">W</button><span>Open ADV Wi-Fi setup</span></div>
+<div><button data-action="wifi-toggle">X</button><span>Wi-Fi OFF / ON (saved networks remain)</span></div>
+<div><button data-action="mac-ip">I</button><span>Enter PC address on ADV</span></div><div><button data-action="help">H</button><span>Show ADV key list</span></div>
+<div><button data-action="diagnostics">D</button><span>Show ADV diagnostics</span></div>
+<div class="jog-box"><button class="jog" id="jog" aria-label="Jog dial. Drag left or right">JOG</button><small>← DRAG →</small></div></div></section>
+</div>
+<p id="message" class="message">Connecting to RADIO DAYS SDR…</p></main>
+<dialog id="frequencyDialog"><form method="dialog"><h2>ENTER FREQUENCY</h2><label><input id="frequencyInput" type="number" min="10" max="30000" step="0.1" inputmode="decimal"><span>kHz</span></label><div><button value="cancel">CANCEL</button><button value="tune">TUNE</button></div></form></dialog>
+<script src="/radio/app.js"></script><script src="/radio/wifi-toggle.js"></script></body></html>
