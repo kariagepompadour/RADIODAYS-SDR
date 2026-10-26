@@ -11,6 +11,7 @@ blocks on the KiwiSDR link.  The KiwiSDR link state is reported in /state
 ("link": connecting | connected | error) instead of being turned into HTTP 503.
 """
 import argparse
+import base64
 import collections
 import json
 import logging
@@ -330,8 +331,20 @@ class Engine:
         self.sample_rate = 0
         self.connected_at = None
         self.started = time.time()
+        self.cardputer_seen = 0.0
+        self.cardputer_usb_seen = 0.0
+        self.cardputer_wifi_seen = 0.0
+        self.cardputer_wifi = None
+        self.cardputer_diag = {}
+        self.cardputer_screen = 0
+        self.pc_ip = ''
+        self.card_command = ''
+        self.card_command_seq = 0
+        self.card_command_until = 0.0
         self.failures = {}
         self._q = queue.Queue(maxsize=14)  # ~0.6 s of audio; oldest dropped when full
+        self.usb_audio_q = queue.Queue(maxsize=48)
+        self.usb_audio_seq = 0
         self._threads = []
         self._cur = None
         # AUTO scan state
@@ -350,6 +363,12 @@ class Engine:
         self.scan_dir = 0
 
     # ----- settings --------------------------------------------------------
+    def request_card_command(self, command):
+        with self.lock:
+            self.card_command = str(command)
+            self.card_command_seq += 1
+            self.card_command_until = time.time() + 5.0
+
     def set_freq(self, khz, user=True):
         if user:
             self.stop_scan()
@@ -463,6 +482,15 @@ class Engine:
                 'blocks': self.blocks, 'played_blocks': self.played_blocks,
                 'audio_device': getattr(self.sink, 'name', ''), 'audio_error': self.audio_error,
                 'sample_rate': self.sample_rate,
+                'unix_time': int(time.time()),
+                'cardputer_usb': time.time() - self.cardputer_usb_seen < 3.0,
+                'cardputer_pc': time.time() - max(self.cardputer_usb_seen, self.cardputer_wifi_seen) < 3.0,
+                'cardputer_wifi': self.cardputer_wifi if time.time() - max(self.cardputer_usb_seen, self.cardputer_wifi_seen) < 3.0 else None,
+                'cardputer_diag': dict(self.cardputer_diag) if time.time() - self.cardputer_usb_seen < 3.0 else {},
+                'cardputer_screen': self.cardputer_screen if time.time() - max(self.cardputer_usb_seen, self.cardputer_wifi_seen) < 3.0 else 0,
+                'pc_ip': self.pc_ip,
+                'card_command': self.card_command if time.time() < self.card_command_until else '',
+                'card_command_seq': self.card_command_seq,
                 'scan': self.scan, 'scan_msg': self.scan_msg,
                 'scan_excess': None if self.scan_excess is None else round(self.scan_excess, 1),
                 'scan_floor': None if self.scan_floor is None else round(self.scan_floor, 1),
@@ -494,6 +522,17 @@ class Engine:
         if self.output != 'mac':             # the Cardputer plays it: unscaled PCM, volume/mute are applied there
             if self.audio is not None:
                 self.audio.offer(samples, rate)
+            pcm = np.clip(samples * 32767.0, -32768, 32767).astype('<i2')
+            for i in range(0, len(pcm), 384):
+                part = pcm[i:i + 384]
+                self.usb_audio_seq = (self.usb_audio_seq + 1) & 0xffffffff
+                item = (self.usb_audio_seq, int(rate), part.tobytes())
+                while True:
+                    try:
+                        self.usb_audio_q.put_nowait(item); break
+                    except queue.Full:
+                        try: self.usb_audio_q.get_nowait()
+                        except queue.Empty: pass
             return
         item = (rate, samples)
         while True:
@@ -890,6 +929,62 @@ def save_state(engine):
 
 
 # --------------------------------------------------------------------------- HTTP API
+def engine_api(engine, path, q):
+    """Apply one controller request. Shared by the LAN HTTP and USB serial transports."""
+    if path == '/state':
+        pass
+    elif path == '/tune':
+        khz = float(q['khz'][0])
+        if not math.isfinite(khz) or not FREQ_MIN <= khz <= FREQ_MAX:
+            raise ValueError('invalid frequency')
+        engine.set_freq(khz)
+    elif path == '/step':
+        delta = int(q['delta'][0])
+        step = float(q.get('khz', ['1'])[0])
+        if not -1000 <= delta <= 1000 or step not in (0.1, 1.0, 5.0, 9.0, 10.0):
+            raise ValueError('invalid step')
+        engine.set_freq(engine.freq + delta * step)
+    elif path == '/mode':
+        engine.set_mode(q['value'][0])
+    elif path == '/volume':
+        engine.set_volume(q['value'][0])
+    elif path == '/mute':
+        v = q.get('value', ['toggle'])[0]
+        engine.set_muted((not engine.muted) if v == 'toggle' else v == '1')
+    elif path == '/scan':
+        direction = int(q.get('dir', ['0'])[0])
+        if direction not in (-1, 0, 1):
+            raise ValueError('invalid scan direction')
+        if direction == 0:
+            engine.stop_scan()
+        else:
+            step = float(q.get('step', ['5'])[0])
+            if step not in (0.1, 1.0, 5.0, 10.0):
+                raise ValueError('invalid step')
+            engine.start_scan(direction, step)
+    elif path == '/output':
+        engine.set_output(q['value'][0])
+    elif path == '/servers':
+        body = engine.state()
+        body['servers'] = [{'index': i, 'short': s['short'], 'name': s['name'],
+                            'lat': s['lat'], 'lon': s['lon']}
+                           for i, s in enumerate(engine.servers)]
+        return body
+    elif path == '/usb-audio':
+        try:
+            seq, rate, pcm = engine.usb_audio_q.get_nowait()
+            return {'seq': seq, 'rate': rate, 'pcm': base64.b64encode(pcm).decode('ascii')}
+        except queue.Empty:
+            return {'pcm': ''}
+    elif path == '/server':
+        engine.switch_server(int(q['index'][0]))
+    else:
+        raise ValueError('unknown route')
+    if path not in ('/state', '/servers', '/output', '/scan'):
+        save_state(engine)
+    return engine.state()
+
+
 def make_handler(engine, token):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.0'
@@ -912,55 +1007,167 @@ def make_handler(engine, token):
                 return self.reply(403, {'error': 'unauthorized'})
             path = parts.path
             try:
-                if path == '/state':
-                    pass
-                elif path == '/tune':
-                    khz = float(q['khz'][0])
-                    if not math.isfinite(khz) or not FREQ_MIN <= khz <= FREQ_MAX:
-                        return self.reply(400, {'error': 'invalid frequency'})
-                    engine.set_freq(khz)
-                elif path == '/step':
-                    delta = int(q['delta'][0])
-                    step = float(q.get('khz', ['1'])[0])
-                    if not -1000 <= delta <= 1000 or step not in (0.1, 1.0, 5.0, 9.0, 10.0):
-                        return self.reply(400, {'error': 'invalid step'})
-                    engine.set_freq(engine.freq + delta * step)
-                elif path == '/mode':
-                    engine.set_mode(q['value'][0])
-                elif path == '/volume':
-                    engine.set_volume(q['value'][0])
-                elif path == '/mute':
-                    v = q.get('value', ['toggle'])[0]
-                    engine.set_muted((not engine.muted) if v == 'toggle' else v == '1')
-                elif path == '/scan':
-                    d = int(q.get('dir', ['0'])[0])
-                    if d not in (-1, 0, 1):
-                        return self.reply(400, {'error': 'invalid scan direction'})
-                    if d == 0:
-                        engine.stop_scan()
-                    else:
-                        step = float(q.get('step', ['5'])[0])
-                        if step not in (0.1, 1.0, 5.0, 10.0):
-                            return self.reply(400, {'error': 'invalid step'})
-                        engine.start_scan(d, step)
-                elif path == '/output':
-                    engine.set_output(q['value'][0])
-                elif path == '/servers':
-                    body = engine.state()
-                    body['servers'] = [{'index': i, 'short': s['short'], 'name': s['name'],
-                                        'lat': s['lat'], 'lon': s['lon']}
-                                       for i, s in enumerate(engine.servers)]
-                    return self.reply(200, body)
-                elif path == '/server':
-                    engine.switch_server(int(q['index'][0]))
-                else:
-                    return self.reply(404, {'error': 'unknown route'})
+                engine.cardputer_seen = time.time()
+                engine.cardputer_wifi_seen = engine.cardputer_seen
+                engine.cardputer_wifi = True       # this request arrived over the Cardputer's Wi-Fi path
+                if 'card_screen' in q:
+                    engine.cardputer_screen = int(q['card_screen'][0])
+                body = engine_api(engine, path, q)
             except (ValueError, KeyError, IndexError) as e:
                 return self.reply(400, {'error': str(e) or 'bad request'})
-            save_state(engine) if path not in ('/state', '/servers', '/output', '/scan') else None
-            return self.reply(200, engine.state())
+            return self.reply(200, body)
 
     return Handler
+
+
+class SerialController:
+    """Cardputer USB control/state/audio link with automatic unplug/replug recovery."""
+    def __init__(self, engine, token, requested='auto'):
+        self.engine, self.token, self.requested = engine, token, requested
+        self.stop_ev = threading.Event()
+        self.thread = None
+        self.port = None
+        self.active = False
+
+    @staticmethod
+    def _candidates(requested):
+        try:
+            from serial.tools import list_ports
+        except ImportError:
+            return []
+        if requested and requested != 'auto':
+            return [requested]
+        result = []
+        for p in list_ports.comports():
+            text = ' '.join(str(x or '') for x in (p.description, p.manufacturer, p.product)).lower()
+            if p.vid == 0x303A or any(word in text for word in ('espressif', 'm5stack', 'cardputer')):
+                result.append(p.device)
+        return result
+
+    def start(self):
+        if self.requested == 'off':
+            return
+        try:
+            import serial  # noqa: F401
+        except ImportError:
+            print('USB control disabled: pyserial is missing (run: python -m pip install pyserial)')
+            return
+        self.thread = threading.Thread(target=self._run, name='cardputer-usb', daemon=True)
+        self.thread.start()
+
+    def stop(self):
+        self.stop_ev.set()
+        if self.thread:
+            self.thread.join(timeout=1.5)
+
+    def _run(self):
+        import serial
+        while not self.stop_ev.is_set():
+            connected = False
+            for device in self._candidates(self.requested):
+                if self.stop_ev.is_set():
+                    break
+                try:
+                    # Open without toggling the modem-control lines: with
+                    # dsrdtr=True pyserial issues no DTR ioctl at open, and RTS
+                    # stays low, so the host never sends an ESP32 auto-reset
+                    # sequence. The OS still raises DTR when the port opens
+                    # (macOS, SDR-1.28 diagnostics: cdc1); the TinyUSB firmware
+                    # writes its requests only while DTR is up.
+                    port = serial.Serial(port=None, baudrate=115200, timeout=0.25,
+                                         write_timeout=1, dsrdtr=True)
+                    port.rts = False
+                    port.port = device
+                    port.open()
+                    with port:
+                        self.port, connected = device, True
+                        print('Cardputer USB control: %s' % device)
+                        port.reset_input_buffer()
+                        last_rx = time.monotonic()
+                        while not self.stop_ev.is_set():
+                            raw = port.readline()
+                            if not raw:
+                                # On macOS an unplugged CDC port can return
+                                # empty reads forever instead of raising. Close
+                                # that stale handle so the outer loop can find
+                                # the re-enumerated Cardputer after replugging.
+                                if time.monotonic() - last_rx > 4.0:
+                                    raise serial.SerialException('USB link silent; reopening the port')
+                                continue
+                            last_rx = time.monotonic()
+                            line = raw.decode('utf-8', 'replace').strip()
+                            response = self.handle_line(line)
+                            if response is None:
+                                continue
+                            # A live /state reply is larger than 1 KB. Pace control
+                            # replies in small chunks so the firmware's CDC receive
+                            # queue (4 KB, Serial.setRxBufferSize) drains while the
+                            # reply is arriving.
+                            payload = (response + '\n').encode()
+                            if ' /usb-audio' in line:
+                                # Audio must arrive faster than 12k samples/s; pacing
+                                # it like a state reply causes rhythmic under-runs
+                                # and beeps, so it goes out in one write.
+                                port.write(payload)
+                                port.flush()
+                            else:
+                                for offset in range(0, len(payload), 96):
+                                    port.write(payload[offset:offset + 96])
+                                    port.flush()
+                                    time.sleep(0.004)
+                            if not self.active:
+                                self.active = True
+                                print('Cardputer USB link active: controls and state are synchronized')
+                except (OSError, serial.SerialException) as e:
+                    if connected:
+                        print('Cardputer USB control disconnected: %s' % e)
+                finally:
+                    self.port = None
+                    self.active = False
+                if self.requested != 'auto':
+                    break
+            self.stop_ev.wait(2.0)
+
+    def handle_line(self, line):
+        """Return one protocol response, or None for unrelated serial log output."""
+        # Serial diagnostics from another firmware task can occasionally be
+        # adjacent to a request. Recover the framed request instead of losing
+        # the whole control cycle.
+        start = line.find('RDSDR_REQ ')
+        if start < 0:
+            return None
+        line = line[start:]
+        bits = line.split(' ', 3)
+        if len(bits) != 4:
+            return None
+        _, request_id, supplied_token, target = bits
+        if supplied_token != self.token:
+            body = {'error': 'unauthorized'}
+        else:
+            try:
+                parts = urlsplit(target)
+                query = parse_qs(parts.query)
+                self.engine.cardputer_seen = time.time()
+                self.engine.cardputer_usb_seen = self.engine.cardputer_seen
+                if 'card_wifi' in query:
+                    self.engine.cardputer_wifi = query['card_wifi'][0] == '1'
+                diagnostic_fields = {
+                    'wifi_rssi': 'diag_wifi_rssi', 'buf_ms': 'diag_buf_ms',
+                    'frames': 'diag_frames', 'gaps': 'diag_gaps', 'lost': 'diag_lost',
+                    'maxgap_ms': 'diag_maxgap_ms', 'reconnects': 'diag_reconnects',
+                    'underruns': 'diag_underruns', 'overruns': 'diag_overruns',
+                    'rebuffers': 'diag_rebuffers', 'heap': 'diag_heap',
+                    'min_heap': 'diag_min_heap', 'largest': 'diag_largest',
+                }
+                for name, parameter in diagnostic_fields.items():
+                    if parameter in query:
+                        self.engine.cardputer_diag[name] = int(query[parameter][0])
+                if 'card_screen' in query:
+                    self.engine.cardputer_screen = int(query['card_screen'][0])
+                body = engine_api(self.engine, parts.path, query)
+            except (ValueError, KeyError, IndexError) as e:
+                body = {'error': str(e) or 'bad request'}
+        return 'RDSDR_RES %s %s' % (request_id, json.dumps(body, separators=(',', ':')))
 
 
 def discovery_server(token, port=DISCOVERY_PORT):
@@ -1023,6 +1230,8 @@ def main():
     ap.add_argument('--port', type=int, default=HTTP_PORT)
     ap.add_argument('--discovery-port', type=int, default=DISCOVERY_PORT)
     ap.add_argument('--audio-port', type=int, default=AUDIO_PORT, help='TCP port that serves audio to the Cardputer speaker')
+    ap.add_argument('--serial-port', default='auto', metavar='PORT',
+                    help='Cardputer USB control port: auto (default), off, COM4, /dev/cu.usbmodem...')
     ap.add_argument('--output', choices=OUTPUTS, default='mac', help='audio output at start (the Cardputer sets it afterwards)')
     ap.add_argument('--servers', default=os.path.join(HERE, 'servers.json'), help='the receiver list (created from servers.default.json on first start)')
     ap.add_argument('--open-manager', action='store_true', help='open the Receiver Manager in the default browser once it is up (the start files do)')
@@ -1074,6 +1283,7 @@ def main():
         server_index=args.server_index if args.server_index is not None else saved.get('server_index', 0),
         fake_source=args.no_kiwi)
     engine.output = args.output
+    engine.pc_ip = lan_ip()
     engine.start()
     if args.selftest is not None:
         try:
@@ -1083,13 +1293,15 @@ def main():
 
     engine.audio = AudioServer(engine, args.token, args.audio_port)
     engine.audio.start()
+    serial_controller = SerialController(engine, args.token, args.serial_port)
+    serial_controller.start()
     if args.manager_port:
         try:
             import receiver_manager
             receiver_manager.start(store, engine, args.manager_port, Engine, NullSink)
             print('Receiver Manager: http://127.0.0.1:%d/   (choose and order receivers in your browser)' % args.manager_port)
             if args.open_manager:                      # a browser problem never stops the radio
-                receiver_manager.open_in_browser('http://127.0.0.1:%d/' % args.manager_port)
+                receiver_manager.open_in_browser('http://127.0.0.1:%d/guide.html' % args.manager_port)
         except OSError as e:
             who = receiver_manager.probe(args.manager_port)    # a busy port alone does not mean it is ours
             murl = 'http://127.0.0.1:%d/' % args.manager_port
@@ -1097,8 +1309,9 @@ def main():
                 print('Receiver Manager はすでに別のプロセスで起動しています（%s など）' % platform_support.MANAGER_FILE + '。この画面で保存した一覧は、このラジオを再起動すると使われます。')
                 print('A RADIO DAYS Receiver Manager is already running in another process (e.g. %s): %s\n'
                       '  Lists saved there are used by this radio from its next start. Quit that one and restart this to edit while listening.' % (platform_support.MANAGER_FILE, murl))
-                if args.open_manager:
-                    receiver_manager.open_in_browser(murl)
+                # Do not open another browser tab. The already-running Manager
+                # remains usable at murl; repeated launcher starts must not
+                # multiply identical Receiver Manager pages.
             elif who == 'other':
                 print('!' * 60 + '\n! Receiver Manager は使えません / Receiver Manager is NOT available\n' + receiver_manager.port_busy_text(args.manager_port) + '\n  (ラジオ本体は動いています / the radio itself keeps running)\n' + '!' * 60)
             else:
@@ -1120,6 +1333,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        serial_controller.stop()
         engine.stop()
     return 0
 

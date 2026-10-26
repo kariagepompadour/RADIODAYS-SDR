@@ -2,13 +2,15 @@
 
 # RADIO DAYS SDR - Operation Guide
 
-**RADIO DAYS SDR quick reference (v1.7)** · [日本語](QUICK_GUIDE_JA.md)
+**RADIO DAYS SDR quick reference** · [日本語](QUICK_GUIDE_JA.md)
 
 A quick reference for the Cardputer ADV and the PC (Mac / Windows). More detail is in docs/OPERATION_JA.md (Japanese).
 
 ## Basic operation
 
-Order of use: (1) double-click the start file for your computer (Mac: Start RADIO DAYS Mac.command / Windows 11: Start RADIO DAYS Win.bat), (2) switch the Cardputer ADV on and, the first time, pick a Wi-Fi and type its password, (3) wait for the WiFi / PC / Kiwi lamps at the top right to turn green (the computer is found automatically). The computer and the Cardputer must be on the same LAN.
+> **START HERE**
+>
+> **Order of use: (1) double-click the start file for your computer (Mac: Start RADIO DAYS Mac.command / Windows 11: Start RADIO DAYS Win.bat), (2) connect the Cardputer ADV by USB and switch it on. USB alone supports both OUT PC and OUT ADV; Cardputer Wi-Fi is optional. If a hot replug does not restore CABLE ok, leave USB connected and restart the Cardputer.**
 
 | Key / action | |
 |---|---|
@@ -20,7 +22,8 @@ Order of use: (1) double-click the start file for your computer (Mac: Start RADI
 | `1` `2` `3` `4` | set the tuning increment to 0.1 / 1 / 5 / 10 kHz (shown by the bottom row of the upper-right panel) |
 | `F` | type a frequency (ENTER to confirm) |
 | `A` `U` `L` | mode AM / USB / LSB. Changing mode selects its recommended increment (AM = 5 kHz; USB/LSB = 1 kHz); keys 1-4 can then override it |
-| `W` | Wi-Fi setup (pick a network and type its password) |
+| `W` | open Wi-Fi setup and rescan. Choose a network and enter its password. Only a successful connection is saved, up to three networks (S=saved list, DEL=delete, X=temporarily turn Wi-Fi OFF/ON without erasing saved networks) |
+| `X` | in Wi-Fi setup, temporarily turn Wi-Fi OFF/ON; saved SSIDs and passwords are preserved |
 | `I` | type the PC's IP address by hand (when it is not found automatically; use the PC IP printed in the start window) |
 | `H` | key list (on the Cardputer screen) |
 | `D` | diagnostics screen (to tell where drop-outs come from) |
@@ -37,6 +40,7 @@ Note: , and / lower / raise the frequency (in MANUAL). The SIGNAL meter is the s
 | `Esc` `` ` `` | close the globe without changing anything |
 | `N` `P` | go to the next / previous receiver in the list without opening the globe |
 
+- The receiver list, locations and selection commands travel over the PC control link. USB alone supports globe locations, receiver selection, OUT PC and OUT ADV playback. Wi-Fi is an alternate path when USB is not used. For a no-Wi-Fi test, open W setup and press X to turn it off temporarily.
 - The contents and order of the list are set in the Receiver Manager (see below). After saving, press G again on the Cardputer to see the new list.
 - On the globe a yellow dot is a registered receiver, red + white is the selected one, and a ring marks the one in use (green = receiving, orange = connecting, red = failed). A receiver without a position has no dot but can still be selected and connected.
 - If the requested receiver cannot be reached, the PC switches to the next one automatically.
@@ -67,7 +71,7 @@ Note: , and / lower / raise the frequency (in MANUAL). The SIGNAL meter is the s
 
 ## Using the Receiver Manager
 
-Opening the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) opens the Receiver Manager in your browser by itself, every time. If it did not open, or after you closed it, open http://127.0.0.1:8780/ in a browser on the same computer. Closing the browser does not stop the radio (press Ctrl+C in the window that started it). For listening the start file alone is enough. "Open Receiver Manager Mac.command" / "Open Receiver Manager Win.bat" is only for editing the list without starting the radio; if a Receiver Manager is already running it opens the existing page. The page runs only on that computer and cannot be opened from other devices.
+Opening the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) opens the Receiver Manager automatically only when it is not already running. Repeated starts do not create duplicate tabs. If it did not open, or after you closed it, open http://127.0.0.1:8780/ in a browser on the same computer. Closing the browser does not stop the radio (press Ctrl+C in the window that started it). For listening the start file alone is enough. "Open Receiver Manager Mac.command" / "Open Receiver Manager Win.bat" is only for editing the list without starting the radio. The page runs only on that computer and cannot be opened from other devices.
 
 - Registered (left): reorder with the ≡ handle or ↑↓, unregister with ×. Name, short name, host, port and latitude/longitude can be edited in place. This order is the order of the globe list (up to 32).
 - Candidates (right): a snapshot of the public KiwiSDR list. Tick to register, untick to unregister. Search, "Japan only", country and registered/unregistered filters are available. Whether a candidate can be reached now is unknown.
@@ -90,7 +94,7 @@ The white panel at the upper right has five rows: (1) OUT PC / OUT ADV, (2) WiFi
 | Lamp | Green | Yellow | Red | Grey |
 |---|---|---|---|---|
 | WiFi | Wi-Fi connected | trying to connect | not connected | — |
-| PC | the PC-side program answers | Wi-Fi is up but the PC does not answer | — | no Wi-Fi |
+| PC | the PC-side program answers | the PC does not answer over USB or Wi-Fi | — | no Wi-Fi (a problem only for OUT ADV) |
 | Kiwi | connected to the KiwiSDR | connecting / reconnecting | connection error | the PC does not answer (K cannot be known) |
 
 ## When the connection does not work
@@ -99,8 +103,8 @@ The status line in the lower black-and-green display and the WiFi / PC / Kiwi la
 
 | Symptom | What it may be / what to do |
 |---|---|
-| W red or yellow / status line Wi-Fi: … | The Cardputer is not on Wi-Fi. Press W and choose the network again. |
-| P yellow / PC: searching… / PC: connect failed | The PC-side program is not running, the IP is wrong, or the devices are on different networks. Check that the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) is running and press I to type the PC IP shown in its window. Guest Wi-Fi that blocks device-to-device traffic does not work. Allow the firewall dialog if it appears (on Windows allow "Private networks"). |
+| W red or yellow / status line Wi-Fi: … | The Cardputer is not on Wi-Fi. That is normal for OUT PC with USB control. Press W to set up Wi-Fi only when using OUT ADV. |
+| P yellow / PC: searching… / PC: connect failed | The PC-side program is not running, USB is disconnected, or the Wi-Fi path has the wrong IP/network. First check the start file and USB cable. For Wi-Fi control, use I to enter the PC IP and allow Private networks in the firewall. |
 | after 3+ s of silence the screen shows PC NOT CONNECTED | The cause cannot be told (PC side, wrong IP or network look the same). The last two lines (error text and PC IP) are the clue. The normal screen returns by itself once the PC answers. |
 | P green but K yellow or red / Kiwi: <error> | The PC-side program runs but the KiwiSDR cannot be reached (full, offline, password, a second connection from the same IP refused, ...). It moves to the next receiver by itself; use N / P, or G to pick another. Do not connect two programs to the same receiver at once. |
 | connected but no sound | Check OUT PC / OUT ADV, volume and mute. For OUT PC check the PC's output device (--sound-device); for OUT ADV read ADV audio: … in the status line. The D screen tells whether drop-outs come from Wi-Fi or the Cardputer. |

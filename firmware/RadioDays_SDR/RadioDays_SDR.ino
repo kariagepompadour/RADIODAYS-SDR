@@ -1,8 +1,9 @@
 /*
   RADIO DAYS SDR - controller for M5Stack Cardputer ADV + U135 rotary encoder.
 
-  The Cardputer does not play any sound.  It controls radiodays_sdr.py on a Mac in the same
-  LAN (HTTP, TCP 8765; discovery UDP 8766), and the Mac plays the KiwiSDR audio.
+  The Cardputer controls radiodays_sdr.py over USB serial or the same LAN. The PC always
+  receives KiwiSDR audio; OUT PC plays it locally, while OUT ADV sends it to the Cardputer
+  over Wi-Fi (TCP 8767).
 
   Structure (differs from the earlier SDR prototype on purpose):
   - All network traffic to the Mac runs in its own task (netTask), so the knob, keys and
@@ -29,8 +30,15 @@
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <Preferences.h>
+#include <USB.h>
+#include "esp32-hal-tinyusb.h"
 #include <ArduinoJson.h>
+#include <mbedtls/base64.h>
 #include <time.h>
+#include "soc/rtc_cntl_reg.h"
+// USB runs on the OTG controller (TinyUSB, USBMode=default), so no USB Serial/JTAG
+// register headers are needed here.
+#include "soc/usb_struct.h"
 
 #include "RadioDays_Types.h"
 #include <freertos/stream_buffer.h>
@@ -38,7 +46,7 @@
 #include "RadioDays_Playout.h"     // when to start / re-buffer / drop (pure C++, tested on a PC)
 #include "globe_land.h"  // land mask from RADIO DAYS U10 (Natural Earth, public domain)  // types used in function signatures (Arduino makes prototypes before the code)
 
-#define BUILD_TAG "SDR-1.10"
+#define BUILD_TAG "SDR-1.28"
 
 // ------------------------------------------------------------------ configuration
 static const char* TOKEN = "RADIO_DAYS_LOCAL_2026";  // must equal --token of radiodays_sdr.py
@@ -103,6 +111,8 @@ static bool synced = false;  // adopted the Mac's values once
 // radio/network operation never waits for the clock.
 static bool clockNtpStarted = false, clockSynced = false;
 static uint32_t clockPollMs = 0;
+static bool clockPersistPending = false;
+static uint32_t clockSaveMs = 0;
 static char clockDate[12] = "--- --/--";
 static char clockTime[12] = "--:-- JST";
 
@@ -213,7 +223,13 @@ static void prefsLoad() {
   stepIdx = defaultStepForMode(wantMode);
   wantVolume = constrain(prefs.getInt("vol", 70), 0, 100);
   wantOutput = constrain(prefs.getInt("out", 0), 0, 1);  // default: Mac speaker
+  int64_t savedEpoch = prefs.getLong64("epoch", 0);
   prefs.end();
+  time_t now = time(nullptr);
+  if (now < 1704067200 && savedEpoch >= 1704067200) {
+    timeval tv = {(time_t)savedEpoch, 0};
+    settimeofday(&tv, nullptr);  // fallback if this ADV has no battery-backed RTC
+  }
 }
 
 static bool prefsSaveWifi() {
@@ -366,6 +382,7 @@ static KnobInput u135Poll() {
 // ------------------------------------------------------------------ Wi-Fi manager (background search)
 enum WifiState : uint8_t { W_IDLE, W_TRY, W_UP, W_WAIT };
 static WifiState wifiState = W_IDLE;
+static bool wifiPaused = false;  // temporary USB-only test mode; saved networks are preserved
 static uint32_t wifiStateMs = 0, wifiWaitMs = 5000;
 static int wifiOrderPos = 0, wifiOrder[WIFI_SAVED_MAX], wifiOrderN = 0;
 static char wifiActive[33] = "";
@@ -388,6 +405,7 @@ static void wifiBeginAttempt() {
   Serial.printf("[WIFI] trying \"%s\"\n", n.ssid);
 }
 static void wifiService() {
+  if (wifiPaused) return;
   bool up = WiFi.status() == WL_CONNECTED;
   switch (wifiState) {
     case W_IDLE:
@@ -427,6 +445,92 @@ static void wifiService() {
 
 // ------------------------------------------------------------------ Mac link (runs in netTask)
 static WiFiUDP udp;
+static volatile bool usbPcOk = false;
+static uint32_t usbLastTry = 0, usbRequestId = 0;
+static volatile bool requestWifiScreen = false, requestWifiToggle = false;
+static volatile bool requestMacIpScreen = false, requestHelpScreen = false, requestGlobeScreen = false, requestDiagScreen = false, requestRadioScreen = false;
+static volatile uint8_t reportedScreen = SC_RADIO;
+static uint32_t lastCardCommandSeq = 0;
+
+// USB uses the OTG/TinyUSB CDC path. The minimal comparison probes showed that Hardware CDC never enumerates on
+// this Cardputer ADV after a Launcher start, while TinyUSB mounts and exchanges data reliably on the same cable.
+static volatile uint32_t usbMounts = 0, usbUnmounts = 0, usbSuspends = 0;
+static void onUsbEvent(void*, esp_event_base_t base, int32_t id, void*) {
+  if (base != ARDUINO_USB_EVENTS) return;
+  if (id == ARDUINO_USB_STARTED_EVENT) usbMounts++;
+  else if (id == ARDUINO_USB_STOPPED_EVENT) usbUnmounts++;
+  else if (id == ARDUINO_USB_SUSPEND_EVENT) usbSuspends++;
+}
+
+// Cardputer ADV does not expose VBUS sensing to TinyUSB in this Launcher configuration. After a physical unplug,
+// TinyUSB can therefore retain stale mounted/DTR state and fail to announce itself when the cable is reinserted.
+// Watch the real SOF counter and periodically pulse the device pull-up until host traffic returns.
+static uint32_t usbLastSofValue = 0, usbLastSofMs = 0, usbLastReconnectMs = 0;
+static bool usbSawHost = false;
+static void usbLinkService() {
+  uint32_t now = millis();
+  uint32_t sof = (USB0.dsts >> 8) & 0x3FFF;
+  if (sof != usbLastSofValue) {
+    usbLastSofValue = sof;
+    usbLastSofMs = now;
+    usbSawHost = true;
+    return;
+  }
+  if (!usbSawHost || now - usbLastSofMs < 1200) return;
+  usbPcOk = false;  // never keep reporting CABLE ok from stale DTR/mount state
+  if (now - usbLastReconnectMs < 2000) return;
+  usbLastReconnectMs = now;
+  tud_disconnect();
+  delay(120);
+  tud_connect();
+}
+
+// USB CDC protocol carries controls, live state and (when selected) OUT ADV audio.
+// Wi-Fi remains an alternate path when USB is not used.
+static bool usbMacGet(const String& path, JsonDocument& doc) {
+  uint32_t now = millis();
+  if (!usbPcOk && now - usbLastTry < 1500) return false;
+  usbLastTry = now;
+  uint32_t id = ++usbRequestId;
+  String target = path + (path.indexOf('?') >= 0 ? "&" : "?") +
+                  "card_wifi=" + (WiFi.status() == WL_CONNECTED ? "1" : "0");
+  if (path.startsWith("/state")) {
+    unsigned diagFillMs = auRing ? (unsigned)(xStreamBufferBytesAvailable(auRing) / 2 * 1000 / 12000) : 0;
+    target += "&diag_wifi_rssi=" + String(WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0);
+    target += "&diag_buf_ms=" + String(diagFillMs);
+    target += "&diag_frames=" + String((unsigned)auNet.frames);
+    target += "&diag_gaps=" + String((unsigned)auNet.gaps);
+    target += "&diag_lost=" + String((unsigned)auNet.lostFrames);
+    target += "&diag_maxgap_ms=" + String((unsigned)auNet.maxGapMs);
+    target += "&diag_reconnects=" + String((unsigned)auNet.reconnects);
+    target += "&diag_underruns=" + String((unsigned)auPlayout.underruns);
+    target += "&diag_overruns=" + String((unsigned)auPlayout.overruns);
+    target += "&diag_rebuffers=" + String((unsigned)auPlayout.rebuffers);
+    target += "&diag_heap=" + String((unsigned)ESP.getFreeHeap());
+    target += "&diag_min_heap=" + String((unsigned)ESP.getMinFreeHeap());
+    target += "&diag_largest=" + String((unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    target += "&card_screen=" + String((unsigned)reportedScreen);
+  }
+  Serial.printf("RDSDR_REQ %lu %s %s\n", (unsigned long)id, TOKEN, target.c_str());
+  String prefix = "RDSDR_RES " + String(id) + " ";
+  uint32_t deadline = millis() + 450;
+  while ((int32_t)(deadline - millis()) > 0) {
+    if (!Serial.available()) { vTaskDelay(2 / portTICK_PERIOD_MS); continue; }
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+    if (!line.startsWith(prefix)) continue;
+    DeserializationError err = deserializeJson(doc, line.substring(prefix.length()));
+    if (err || (doc.size() == 1 && !doc["error"].isNull())) {
+      usbPcOk = false;
+      setNetStatus(err ? "PC CABLE: bad reply" : "PC CABLE: request failed");
+      return false;
+    }
+    usbPcOk = true;
+    return true;
+  }
+  usbPcOk = false;
+  return false;
+}
 
 static bool discoverMac() {
   udp.begin(0);
@@ -461,13 +565,26 @@ static void setNetStatus(const char* s) {
 
 // GET path on the Mac.  Returns true and fills `doc` on HTTP 200 + valid JSON.
 static bool macGet(const String& path, JsonDocument& doc) {
+  if (usbMacGet(path, doc)) return true;
+  if (WiFi.status() != WL_CONNECTED) {
+    setNetStatus("PC: connect CABLE or Wi-Fi");
+    return false;
+  }
   String ip;
   { Lock l; ip = macIP; }
   HTTPClient http;
   http.setReuse(false);
   http.setConnectTimeout(1500);
   http.setTimeout(2000);
-  String url = "http://" + ip + ":" + String(MAC_HTTP_PORT) + path + (path.indexOf('?') >= 0 ? "&" : "?") + "token=" + TOKEN;
+  String target = path;
+  if (path.startsWith("/state")) {
+    // Screen mirroring must work over either control route. Previously this
+    // field was sent only by usbMacGet(), so physical G/D presses could not
+    // change the browser while the Cardputer was using Wi-Fi.
+    target += (target.indexOf('?') >= 0 ? "&" : "?");
+    target += "card_screen=" + String((unsigned)reportedScreen);
+  }
+  String url = "http://" + ip + ":" + String(MAC_HTTP_PORT) + target + (target.indexOf('?') >= 0 ? "&" : "?") + "token=" + TOKEN;
   if (!http.begin(url)) { setNetStatus("PC: bad address"); return false; }
   int code = http.GET();
   if (code != 200) {
@@ -504,6 +621,28 @@ static void absorbState(JsonDocument& doc, bool adopt) {
   rem.audioSent = doc["audio_sent"] | 0;
   rem.audioDropped = doc["audio_dropped"] | 0;
   rem.audioDisc = doc["audio_disconnects"] | 0;
+  uint32_t commandSeq = doc["card_command_seq"] | 0;
+  const char* command = doc["card_command"] | "";
+  if (commandSeq != 0 && commandSeq != lastCardCommandSeq) {
+    lastCardCommandSeq = commandSeq;
+    if (strcmp(command, "wifi") == 0) requestWifiScreen = true;
+    else if (strcmp(command, "wifi-toggle") == 0) requestWifiToggle = true;
+    else if (strcmp(command, "mac-ip") == 0) requestMacIpScreen = true;
+    else if (strcmp(command, "help") == 0) requestHelpScreen = true;
+    else if (strcmp(command, "globe") == 0) requestGlobeScreen = true;
+    else if (strcmp(command, "diagnostics") == 0) requestDiagScreen = true;
+    else if (strcmp(command, "radio") == 0) requestRadioScreen = true;
+  }
+  int64_t pcEpoch = doc["unix_time"] | (int64_t)0;
+  if (pcEpoch >= 1704067200) {
+    time_t localEpoch = time(nullptr);
+    if (localEpoch < 1704067200 || llabs((long long)localEpoch - (long long)pcEpoch) > 2) {
+      timeval tv = {(time_t)pcEpoch, 0};
+      settimeofday(&tv, nullptr);
+    }
+    clockSynced = true;
+    clockPersistPending = true;
+  }
   {
     static bool prevScanning = false;
     strlcpy(rem.scan, doc["scan"] | "off", sizeof(rem.scan));
@@ -538,16 +677,12 @@ static void netTask(void*) {
   int failures = 0;
   uint32_t sentFreq = 0, sentMode = 0, sentVol = 0, sentMute = 0, sentServer = 0, sentOut = 0, sentScan = 0;
   for (;;) {
-    if (WiFi.status() != WL_CONNECTED) {
-      setNetStatus("PC: waiting for Wi-Fi");
-      { Lock l; rem.ok = false; }
-      vTaskDelay(300 / portTICK_PERIOD_MS);
-      continue;
-    }
+    bool usb = usbPcOk;
+    bool wifi = WiFi.status() == WL_CONNECTED;
     String ip;
     bool manual;
     { Lock l; ip = macIP; manual = macManual; }
-    if (ip.isEmpty() || (!manual && failures >= 4)) {
+    if (!usb && wifi && (ip.isEmpty() || (!manual && failures >= 4))) {
       if (millis() - lastDiscover > 3000) {
         lastDiscover = millis();
         setNetStatus("PC: searching...");
@@ -566,7 +701,7 @@ static void netTask(void*) {
     { Lock l; vO = verOut; outSel = wantOutput; vA = verScan; scanDir = wantScanDir; scanStep = STEPS[stepIdx]; scanning = strcmp(rem.scan, "off") != 0; f = wantFreq; mo = wantMode; vol = wantVolume; mu = wantMuted; srv = wantServer;
       vF = verFreq; vM = verMode; vV = verVol; vU = verMute; vS = verServer; }
     JsonDocument doc;
-    bool did = false, ok = true;
+    bool did = false, ok = true, polledState = false, audioPull = false;
     if (vF != sentFreq && millis() - lastTune >= 120) {
       lastTune = millis();
       ok = macGet("/tune?khz=" + String(f, 3), doc);
@@ -619,13 +754,58 @@ static void netTask(void*) {
     } else if (millis() - lastPoll >= (scanning ? 200u : 700u)) {  // the dial follows the scan: poll often while it runs
       lastPoll = millis();
       ok = macGet("/state", doc);
+      polledState = true;
+      did = true;
+    } else if (outSel && usbPcOk) {
+      ok = macGet("/usb-audio", doc);
+      audioPull = true;
+      if (ok) {
+        const char* b64 = doc["pcm"] | "";
+        size_t inLen = strlen(b64), outLen = 0;
+        uint8_t pcm[768];
+        if (inLen && mbedtls_base64_decode(pcm, sizeof(pcm), &outLen,
+              (const unsigned char*)b64, inLen) == 0 && outLen >= 2 && auRing) {
+          auRate = doc["rate"] | 11998;
+          auNet.onFrame(doc["seq"] | 0, millis());
+          auConn = true;
+          auNetState = AU_BUFFERING;
+          size_t samples = outLen / 2;
+          size_t fill = xStreamBufferBytesAvailable(auRing) / 2;
+          if (auPlayout.admit((uint32_t)fill, samples)) xStreamBufferSend(auRing, pcm, samples * 2, 0);
+        }
+      }
       did = true;
     }
     if (did) {
       if (ok) {
         failures = 0;
-        absorbState(doc, true);
-        setNetStatus("PC: OK");
+        if (!audioPull) absorbState(doc, true);
+        // The browser is a second controller. Adopt its state on a normal poll,
+        // but never overwrite a newer physical-key change still waiting to be sent.
+        if (polledState) {
+          float remoteFreq = doc["freq"] | wantFreq;
+          int remoteVol = constrain((int)(doc["volume"] | wantVolume), 0, 100);
+          bool remoteMute = doc["muted"] | false;
+          int remoteServer = doc["server_index"] | wantServer;
+          int remoteOut = String(doc["output"] | "mac") == "cardputer" ? 1 : 0;
+          String remoteMode = doc["mode"] | "am";
+          Lock l;
+          bool changed = false;
+          if (verFreq == sentFreq && strcmp(rem.scan, "off") == 0 && fabsf(wantFreq - remoteFreq) > 0.0005f) {
+            wantFreq = remoteFreq; changed = true;
+          }
+          if (verMode == sentMode) {
+            for (int i = 0; i < 3; i++) if (remoteMode == MODES[i] && wantMode != i) {
+              wantMode = i; stepIdx = defaultStepForMode(i); changed = true;
+            }
+          }
+          if (verVol == sentVol && wantVolume != remoteVol) { wantVolume = remoteVol; changed = true; }
+          if (verMute == sentMute) wantMuted = remoteMute;
+          if (verServer == sentServer) wantServer = remoteServer;
+          if (verOut == sentOut && wantOutput != remoteOut) { wantOutput = remoteOut; changed = true; }
+          if (changed) { radioDirty = true; lastRadioSaveMs = millis(); }
+        }
+        setNetStatus(usbPcOk ? "PC: OK (CABLE)" : "PC: OK (Wi-Fi)");
       } else {
         failures++;
         Lock l; rem.ok = false; statusRev++;
@@ -670,9 +850,7 @@ static void changeMode(int m) {
 static void clockService() {
   if (WiFi.status() != WL_CONNECTED) {
     clockNtpStarted = false;  // configure SNTP again after the next connection
-    return;                   // keep a clock already obtained; the ESP32 system clock continues
-  }
-  if (!clockNtpStarted) {
+  } else if (!clockNtpStarted) {
     configTzTime("JST-9", "pool.ntp.org", "time.google.com");
     clockNtpStarted = true;
     clockPollMs = 0;
@@ -682,6 +860,20 @@ static void clockService() {
   clockPollMs = nowMs;
   time_t now = time(nullptr);
   if (now < 1700000000) return;  // NTP has not supplied a plausible date yet
+  if (!clockSynced) { clockSynced = true; clockPersistPending = true; }
+  if (clockPersistPending || !clockSaveMs || nowMs - clockSaveMs >= 10UL * 60UL * 1000UL) {
+    if (prefs.begin("rdsdr", false)) {
+      prefs.putLong64("epoch", (int64_t)now);
+      prefs.end();
+    }
+    if (M5.Rtc.isEnabled()) {
+      struct tm rt;
+      localtime_r(&now, &rt);
+      M5.Rtc.setDateTime(&rt);
+    }
+    clockPersistPending = false;
+    clockSaveMs = nowMs;
+  }
   struct tm local;
   localtime_r(&now, &local);
   static const char* const DAY[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
@@ -742,6 +934,11 @@ static void audioNetTask(void*) {
       if (cli.connected()) cli.stop();
       auConn = false;
       wasUp = false;
+      vTaskDelay(100 / portTICK_PERIOD_MS);
+      continue;
+    }
+    if (usbPcOk) {
+      if (cli.connected()) cli.stop();
       vTaskDelay(100 / portTICK_PERIOD_MS);
       continue;
     }
@@ -893,9 +1090,32 @@ static void audioService() {
     auLevel = 0;
     Serial.println("[AUDIO] speaker off");
   }
+  // setVolume(0) silences PCM but can leave the small amplifier's own hiss.
+  // A real MUTE therefore powers the speaker path down, then starts it cleanly
+  // again on unmute while the network stream remains connected.
+  if (auWanted && wantMuted && auSpeakerOn) {
+    auSpeakerOn = false;
+    M5.Speaker.stop();
+    M5.Speaker.end();
+    auLevel = 0;
+    if (auRing) xStreamBufferReset(auRing);
+    auPlayout.reset();
+    Serial.println("[AUDIO] hard mute (speaker off)");
+  } else if (auWanted && !wantMuted && !auSpeakerOn) {
+    auto spk = M5.Speaker.config();
+    spk.sample_rate = 48000;
+    spk.task_pinned_core = APP_CPU_NUM;
+    M5.Speaker.config(spk);
+    M5.Speaker.begin();
+    if (auRing) xStreamBufferReset(auRing);
+    auPlayout.reset();
+    appliedVol = 255;
+    auSpeakerOn = true;
+    Serial.println("[AUDIO] unmute (speaker on)");
+  }
   if (auWanted) {
     uint8_t v = (uint8_t)lroundf(192.0f * auGain());  // 192 as U10's maximum (the small speaker distorts above)
-    if (v != appliedVol) { M5.Speaker.setVolume(v); appliedVol = v; }
+    if (auSpeakerOn && v != appliedVol) { M5.Speaker.setVolume(v); appliedVol = v; }
     static uint32_t lastLog = 0;
     if (millis() - lastLog > 5000) {
       lastLog = millis();
@@ -919,12 +1139,13 @@ static void txt(int x, int y, int size, uint16_t fg, const char* s, uint16_t bg 
 static void header(const char* title) {
   lcd.fillScreen(COL_BG);
   txt(4, 3, 1, COL_AMBER, title);
+  txt(188, 3, 1, COL_DIM, BUILD_TAG);
   lcd.drawFastHLine(0, 14, 240, COL_DIM);
 }
 
 static Screen screen = SC_RADIO;
 static bool screenDirty = true;
-static void setScreen(Screen s) { screen = s; screenDirty = true; }
+static void setScreen(Screen s) { screen = s; reportedScreen = (uint8_t)s; screenDirty = true; }
 
 // ------------------------------------------------------------------ radio screen
 static const char* const MODE_LABEL[] = {"AM", "USB", "LSB"};
@@ -1181,7 +1402,7 @@ static void analogBegin() {  // called once at boot, before Wi-Fi, so the blocks
 // The status line: which link is the problem?  W = Wi-Fi, M = Mac, K = KiwiSDR.
 static void statusText(char* out, size_t n, uint16_t* col) {
   Lock l;
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() != WL_CONNECTED && (!rem.ok || (wantOutput == 1 && !usbPcOk))) {
     if (savedCount == 0) snprintf(out, n, "Wi-Fi: not set. Press W");
     else if (wifiState == W_TRY) snprintf(out, n, "Wi-Fi: connecting %.14s", saved[wifiOrder[wifiOrderPos]].ssid);
     else snprintf(out, n, "Wi-Fi: no connection (retry)");
@@ -1530,14 +1751,12 @@ static void drawRadioAnalog(bool full) {
   }
 }
 
-// ---- "PC NOT CONNECTED" notice.  Shown only when Wi-Fi is up and the PC has not answered for 3 s.
-// It is a SUGGESTION to check the PC program, not a claim: a wrong PC IP or a network problem look the same.
+// ---- "PC NOT CONNECTED" notice. USB or Wi-Fi may provide the control link.
 static bool macNoticeActive() {
   static uint32_t downSince = 0;
-  bool wifi = WiFi.status() == WL_CONNECTED;
   bool ok;
   { Lock l; ok = rem.ok; }
-  if (!wifi || ok) { downSince = 0; return false; }
+  if (ok) { downSince = 0; return false; }
   if (!downSince) downSince = millis();
   return millis() - downSince >= 3000;
 }
@@ -1566,9 +1785,9 @@ static void drawMacNotice(bool full) {
   drawLamp(164, 3, 'W', lw); drawLamp(190, 3, 'P', COL_BAD); drawLamp(216, 3, 'K', COL_DIM);
   txt(24, 22, 2, COL_BAD, "PC NOT CONNECTED");
   txt(4, 50, 1, COL_TEXT, "Start RADIO DAYS on your PC.");
-  txt(4, 60, 1, COL_TEXT, "Check that its window stays open.");
-  txt(4, 76, 1, COL_DIM, "Could also be a wrong PC IP address");
-  txt(4, 86, 1, COL_DIM, "or a network problem (key I: set IP).");
+  txt(4, 60, 1, COL_TEXT, "Connect USB, or use the same Wi-Fi.");
+  txt(4, 76, 1, COL_DIM, "OUT PC: USB is enough.");
+  txt(4, 86, 1, COL_DIM, "OUT ADV: USB or Wi-Fi audio.");
   txt(4, 102, 1, COL_WARN, detail);
   txt(4, 112, 1, COL_DIM, ipLine);
   txt(4, 124, 1, COL_AMBER, local);
@@ -1584,6 +1803,17 @@ static void drawRadio(bool full) {
 
 
 static void handleRadio(const KeyInput& k, const KnobInput& kn) {
+  // ADV's TCA8418 reports one queued edge per update.  Check the live matrix as
+  // well so a G held across an update cannot be lost by the extra edge filter.
+  if (M5Cardputer.Keyboard.isKeyPressed('g') || M5Cardputer.Keyboard.isKeyPressed('G')) {
+    globeOpen();
+    return;
+  }
+  static bool muteKeyWasDown = false;
+  bool muteKeyDown = M5Cardputer.Keyboard.isKeyPressed('m') || M5Cardputer.Keyboard.isKeyPressed('M');
+  bool muteKeyDirect = muteKeyDown && !muteKeyWasDown;
+  muteKeyWasDown = muteKeyDown;
+  if (muteKeyDirect) toggleMute();
   if (kn.tuneDetents) {
     if (tuneAuto) autoTurn(kn.tuneDetents);
     else { float f; { Lock l; f = wantFreq; } changeFreq(f + kn.tuneDetents * STEPS[stepIdx]); }
@@ -1601,7 +1831,7 @@ static void handleRadio(const KeyInput& k, const KnobInput& kn) {
       case '/': if (tuneAuto) autoTurn(+1); else changeFreq(f + STEPS[stepIdx]); break;   // right arrow
       case 't': case 'T': setTuneAuto(!tuneAuto); break;                  // MANUAL <-> AUTO (Tab does the same)
       case '`': if (scanRunning()) scanRequest(0); break;                 // Esc: stop a scan
-      case 'm': case 'M': toggleMute(); break;
+      case 'm': case 'M': if (!muteKeyDirect) toggleMute(); break;
       case '1': stepIdx = 0; break;
       case '2': stepIdx = 1; break;
       case '3': stepIdx = 2; break;
@@ -1612,7 +1842,7 @@ static void handleRadio(const KeyInput& k, const KnobInput& kn) {
       case 'n': case 'N': changeServer(+1); break;
       case 'p': case 'P': changeServer(-1); break;
       case 'f': case 'F': entry = ""; entryMsg = ""; setScreen(SC_FREQ); return;
-      case 'w': case 'W': setScreen(SC_WIFI_LIST); return;
+      case 'w': case 'W': if (wifiPaused) setScreen(SC_WIFI_LIST); else startScan(); return;
       case 'i': case 'I': { Lock l; entry = macIP; } entryMsg = ""; setScreen(SC_MACIP); return;
       case 'g': case 'G': globeOpen(); return;
       case 'o': case 'O': changeOutput(wantOutput ? 0 : 1); break;   // Mac speaker <-> Cardputer speaker
@@ -1962,6 +2192,8 @@ static void globeOpen() {
   gPending = -1;
   gOpenMs = millis();
   satReset(millis());
+  header("KiwiSDR GLOBE");
+  txt(54, 59, 2, COL_AMBER, "OPENING...");
   if (!globeBegin()) Serial.println("[GLOBE] no memory: text list instead");
   globeAim(true);
   gPanelKey = 0;
@@ -2026,20 +2258,18 @@ static void drawGlobePanel(bool full) {
   gPanelKey = key;
   lcd.fillRect(PANEL_X, 18, 144, 98, COL_BG);
   if (n == 0) {
-    bool wifi = WiFi.status() == WL_CONNECTED;
     bool macOk;
     char det[40];
     { Lock l; macOk = rem.ok; const char* d = netStatus; if (strncmp(d, "PC: ", 4) == 0) d += 4; snprintf(det, sizeof det, "%.22s", d); }
-    if (!wifi) {
-      txt(PANEL_X, 24, 1, COL_BAD, "Wi-Fi not connected");
-      txt(PANEL_X, 38, 1, COL_DIM, "Esc, W: Wi-Fi setup");
-    } else if (!macOk) {  // the PC has not answered: a suggestion, not a diagnosis
+    // Receiver locations live on the PC. USB control is fully sufficient;
+    // Cardputer Wi-Fi is relevant only when OUT ADV carries audio.
+    if (!macOk) {  // neither USB nor Wi-Fi control has answered
       txt(PANEL_X, 22, 1, COL_BAD, "PC NOT CONNECTED");
       txt(PANEL_X, 36, 1, COL_TEXT, "Check that");
       txt(PANEL_X, 46, 1, COL_TEXT, "Start RADIO DAYS on");
       txt(PANEL_X, 56, 1, COL_TEXT, "your PC and keep it open.");
-      txt(PANEL_X, 70, 1, COL_DIM, "Or a wrong PC IP / a");
-      txt(PANEL_X, 80, 1, COL_DIM, "network problem (I key)");
+      txt(PANEL_X, 70, 1, COL_DIM, "Connect USB, or check");
+      txt(PANEL_X, 80, 1, COL_DIM, "the PC network / I key.");
       txt(PANEL_X, 94, 1, COL_WARN, det);
     } else {
       bool late = millis() - gOpenMs > 4000;
@@ -2171,17 +2401,39 @@ static NetEntry nets[NET_MAX];
 static int netCount = 0, netSel = 0;
 static bool scanning = false;
 static String joinSsid, joinPass, resultText;
+static String wifiListMsg;
+static String scanConnectedSsid;
+static int scanConnectedRssi = 0;
 static bool showPass = false, resultOk = false, askDelete = false;
 static uint32_t joinStartMs = 0;
 static int savedSel = 0;
 static String savedMsg;
 
 static void startScan() {
+  scanConnectedSsid = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "";
+  scanConnectedRssi = scanConnectedSsid.length() ? WiFi.RSSI() : 0;
   WiFi.mode(WIFI_STA);
   netCount = 0; netSel = 0;
   WiFi.scanDelete();
   scanning = WiFi.scanNetworks(true, false) == WIFI_SCAN_RUNNING;
   setScreen(SC_WIFI_LIST);
+}
+static void setWifiPaused(bool paused) {
+  wifiPaused = paused;
+  scanning = false;
+  WiFi.scanDelete();
+  netCount = 0;
+  if (paused) {
+    WiFi.disconnect(false, false);
+    WiFi.mode(WIFI_OFF);
+    wifiState = W_IDLE;
+  } else {
+    WiFi.mode(WIFI_STA);
+    wifiState = W_IDLE;
+    startScan();
+  }
+  statusRev++;
+  screenDirty = true;
 }
 static void collectScan() {
   int n = WiFi.scanComplete();
@@ -2195,6 +2447,15 @@ static void collectScan() {
     for (int j = 0; j < netCount; j++) if (nets[j].ssid == s) { dup = true; if (WiFi.RSSI(i) > nets[j].rssi) nets[j].rssi = WiFi.RSSI(i); }
     if (dup) continue;
     nets[netCount++] = {s, WiFi.RSSI(i), WiFi.encryptionType(i) == WIFI_AUTH_OPEN};
+  }
+  // Some ESP32 scans omit the AP that is already carrying the connection.
+  // Keep the setup screen truthful: a live connection must never be reported
+  // as "No networks found" merely because that AP was absent from this scan.
+  if (scanConnectedSsid.length() && netCount < NET_MAX) {
+    String current = scanConnectedSsid;
+    bool listed = false;
+    for (int i = 0; i < netCount; i++) if (nets[i].ssid == current) { listed = true; break; }
+    if (!listed) nets[netCount++] = {current, scanConnectedRssi, false};
   }
   // strongest first
   for (int i = 0; i < netCount; i++)
@@ -2235,10 +2496,26 @@ static String saveJoined() {
 
 static void drawWifiList() {
   header("WI-FI SETUP");
+  if (wifiPaused) {
+    txt(4, 30, 1, COL_BAD, "Wi-Fi OFF (PC CABLE only)");
+    txt(4, 112, 1, COL_DIM, "X: resume Wi-Fi   `: back");
+    return;
+  }
   if (scanning) { txt(4, 30, 1, COL_WARN, "Scanning..."); return; }
+  // A safety warning used to be painted over the seventh network row, making
+  // both lines look like a yellow display fault. Give it a dedicated panel.
+  if (wifiListMsg.length()) {
+    lcd.fillRect(0, 16, 240, 82, COL_BG);
+    txt(4, 30, 1, COL_WARN, wifiListMsg.c_str());
+    txt(4, 48, 1, COL_TEXT, "The cable may supply power");
+    txt(4, 59, 1, COL_TEXT, "without an active PC data link.");
+    txt(4, 78, 1, COL_DIM, "Press any key to return.");
+    txt(4, 111, 1, COL_DIM, "Wi-Fi remains connected.");
+    return;
+  }
   if (netCount == 0) {
     txt(4, 30, 1, COL_WARN, "No networks found.");
-    txt(4, 112, 1, COL_DIM, "R: rescan  S: saved  `: back");
+    txt(4, 112, 1, COL_DIM, "R rescan S saved X off ` back");
     return;
   }
   int first = max(0, min(netSel - 3, netCount - 7));
@@ -2251,7 +2528,7 @@ static void drawWifiList() {
     txt(4, 19 + row * 11, 1, i == netSel ? COL_AMBER : COL_TEXT, line);
   }
   txt(4, 100, 1, COL_DIM, "knob / ; . move   ENTER select");
-  txt(4, 111, 1, COL_DIM, "R rescan  S saved  ` back");
+  txt(4, 111, 1, COL_DIM, "R rescan S saved X off ` back");
 }
 static void drawWifiPass() {
   header("WI-FI SETUP");
@@ -2311,6 +2588,22 @@ static void handleMove(const KeyInput& k, const KnobInput& kn, int& sel, int cou
   if (move && count > 0) { sel = constrain(sel + move, 0, count - 1); screenDirty = true; }
 }
 static void handleWifiList(const KeyInput& k, const KnobInput& kn) {
+  // TCA8418 can occasionally omit a queued key edge while the asynchronous scan is updating.
+  // Read the live matrix too, but collapse the live state and queued character into one toggle.
+  static bool xWasDown = false;
+  bool xDown = M5Cardputer.Keyboard.isKeyPressed('x') || M5Cardputer.Keyboard.isKeyPressed('X');
+  static uint32_t lastXMs = 0;
+  bool xPressed = hasCharI(k, 'x') || (xDown && !xWasDown);
+  xWasDown = xDown;
+  if (xPressed && millis() - lastXMs > 750) {
+    lastXMs = millis();
+    // X is an explicit user command. Never refuse it because a momentary USB request timed out:
+    // the same screen remains usable while Wi-Fi is off, so X can always turn Wi-Fi back on.
+    wifiListMsg = "";
+    setWifiPaused(!wifiPaused);
+    return;
+  }
+  if (wifiListMsg.length()) { wifiListMsg = ""; screenDirty = true; return; }
   if (scanning) { collectScan(); if (!scanning) screenDirty = true; }
   if (hasChar(k, '`')) { leaveWifiSetup(); return; }
   if (hasCharI(k, 'r')) { startScan(); return; }
@@ -2402,7 +2695,7 @@ static void drawHelp() {
   txt(4, 69, 1, COL_TEXT, "TAB or T: AUTO <-> MANUAL");
   txt(4, 79, 1, COL_TEXT, "Esc or knob press: stop a scan");
   txt(4, 89, 1, COL_TEXT, "G globe   N/P next/prev KiwiSDR");
-  txt(4, 99, 1, COL_TEXT, "W Wi-Fi   I PC IP    H help");
+  txt(4, 99, 1, COL_TEXT, "W Wi-Fi (X off/on) I PC IP H help");
   txt(4, 109, 1, COL_TEXT, "O speaker Mac/ADV   D diagnostics");
   txt(4, 122, 1, COL_DIM, "any key: back   " BUILD_TAG);
 }
@@ -2422,7 +2715,7 @@ static void drawDiag(bool full) {
   bool wifi = WiFi.status() == WL_CONNECTED;
   snprintf(l, sizeof l, "WIFI %s %ddBm", wifi ? WiFi.SSID().substring(0, 14).c_str() : "-", wifi ? WiFi.RSSI() : 0);
   line(wifi ? COL_OK : COL_BAD, l);
-  { Lock lk; snprintf(l, sizeof l, "MAC  %.15s %.24s", macIP.c_str(), rem.ok ? "ok" : netStatus); line(rem.ok ? COL_OK : COL_WARN, l);
+  { Lock lk; snprintf(l, sizeof l, "MAC  %.15s %s", macIP.c_str(), rem.ok ? (usbPcOk ? "CABLE ok" : "Wi-Fi ok") : "not connected"); line(rem.ok ? COL_OK : COL_WARN, l);
     snprintf(l, sizeof l, "KIWI %s %.12s %.0fdBm", rem.link, rem.server, rem.rssi); line(strcmp(rem.link, "connected") == 0 ? COL_OK : COL_WARN, l); }
   uint8_t as = auStateNow();
   snprintf(l, sizeof l, "OUT  %s %s", wantOutput ? "ADV" : "PC", wantOutput ? auStateName(as) : "(PC plays)");
@@ -2438,26 +2731,42 @@ static void drawDiag(bool full) {
   }
   snprintf(l, sizeof l, "HEAP %u min %u blk %u", (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMinFreeHeap(), (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
   line(COL_TEXT, l);
+  // SOF+ = the host is sending USB frames to the OTG controller. mount = USB enumeration completed;
+  // cdc = the host application currently has the serial port open.
+  static uint32_t lastSof = 0;
+  uint32_t sof = (USB0.dsts >> 8) & 0x3FFF;
+  bool sofMoving = sof != lastSof;
+  lastSof = sof;
+  bool mounted = (bool)USB;
+  bool cdc = (bool)Serial;
+  snprintf(l, sizeof l, "USB  SOF%c m%d cdc%d up%lu dn%lu", sofMoving ? '+' : '-', (int)mounted, (int)cdc,
+           (unsigned long)usbMounts, (unsigned long)usbUnmounts);
+  line(cdc ? COL_OK : mounted ? COL_WARN : COL_BAD, l);
   txt(4, 124, 1, COL_DIM, "any key: back");
 }
 
 // ------------------------------------------------------------------ setup / loop
 void setup() {
+  // PC state replies exceed the default 256-byte CDC queue. Keep the whole JSON frame so USB-only control cannot
+  // lose its tail. USB itself is started by the Arduino core before setup() when CDCOnBoot=cdc.
+  USB.onEvent(onUsbEvent);
+  Serial.setRxBufferSize(4096);
   Serial.begin(115200);
-  delay(200);
-  Serial.printf("[BOOT] RADIO DAYS SDR %s\n", BUILD_TAG);
+  Serial.printf("[BOOT] RADIO DAYS SDR %s TinyUSB rtc=0x%06lx\n", BUILD_TAG, (unsigned long)REG_READ(RTC_CNTL_USB_CONF_REG));
   mtx = xSemaphoreCreateMutex();
   lcd.begin();
   auto cfg = M5.config();
   cfg.clear_display = false;
   cfg.internal_imu = false;
-  cfg.internal_rtc = false;
+  cfg.internal_rtc = true;    // use the battery-backed RTC when this ADV revision provides one
   cfg.internal_spk = true;   // pins and amplifier set-up are known to M5Unified; the speaker is only STARTED when O selects it
   cfg.internal_mic = false;
   cfg.external_imu = false;  // Port A belongs to the U135
   cfg.external_rtc = false;
   cfg.serial_baudrate = 0;
   M5Cardputer.begin(cfg, true);
+  setenv("TZ", "JST-9", 1);
+  tzset();
   lcd.setRotation(1);
   lcd.setBrightness(128);
   lcd.setFont(&fonts::Font0);
@@ -2476,12 +2785,14 @@ void setup() {
   // priority prevents a full receive window from turning a short stall into a send timeout.
   xTaskCreatePinnedToCore(audioNetTask, "aunet", 6144, nullptr, 2, nullptr, PRO_CPU_NUM);
   xTaskCreatePinnedToCore(audioPlayTask, "auplay", 4096, nullptr, 2, nullptr, APP_CPU_NUM);
-  if (savedCount == 0) { screen = SC_WIFI_LIST; startScan(); }
-  else screenDirty = true;
+  // Start the radio even without saved Wi-Fi: OUT PC can be controlled entirely over USB.
+  // W opens optional Wi-Fi setup; USB alone supports both output modes.
+  screenDirty = true;
 }
 
 void loop() {
   M5Cardputer.update();
+  usbLinkService();
   KeyInput k = keyboardPoll();
   KnobInput kn = u135Poll();
   if (screen != SC_WIFI_LIST && screen != SC_WIFI_PASS && screen != SC_WIFI_JOIN && screen != SC_WIFI_SAVED && screen != SC_WIFI_RESULT)
@@ -2489,6 +2800,26 @@ void loop() {
   clockService();
   prefsSaveRadioIfIdle();
   audioService();
+
+  if (requestWifiScreen) {
+    requestWifiScreen = false;
+    if (wifiPaused) setScreen(SC_WIFI_LIST); else startScan();
+  }
+  if (requestWifiToggle) {
+    requestWifiToggle = false;
+    wifiListMsg = "";
+    setWifiPaused(!wifiPaused);
+  }
+  if (requestMacIpScreen) {
+    requestMacIpScreen = false;
+    { Lock l; entry = macIP; }
+    entryMsg = "";
+    setScreen(SC_MACIP);
+  }
+  if (requestHelpScreen) { requestHelpScreen = false; setScreen(SC_HELP); }
+  if (requestGlobeScreen) { requestGlobeScreen = false; globeOpen(); }
+  if (requestDiagScreen) { requestDiagScreen = false; setScreen(SC_DIAG); }
+  if (requestRadioScreen) { requestRadioScreen = false; if (screen == SC_GLOBE) globeClose(); else setScreen(SC_RADIO); }
 
   // ==== DISPATCH BEGIN (extracted verbatim by firmware/tools/host_render to test screen changes)
   switch (screen) {

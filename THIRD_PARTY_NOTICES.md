@@ -20,6 +20,7 @@ Because the license situation is unclear, the files are fetched from their autho
 | numpy | BSD-3-Clause (plus bundled components under 0BSD / MIT / Zlib / CC0-1.0) |
 | SoundCard | BSD-3-Clause |
 | cffi, pycparser (installed with SoundCard; used for the Windows audio output) | cffi MIT-0, pycparser BSD-3-Clause |
+| pyserial (Cardputer USB cable link) | BSD-3-Clause (reported as "BSD") |
 
 ## 3. Firmware: what the compiled `.bin` files contain
 
@@ -54,7 +55,7 @@ KiwiSDR is a product of its respective owners; M5Stack and Cardputer are tradema
 
 * 本プロジェクトで書いたコード（`.ino`/`.h`/Python/HTML・JavaScript/スクリプト）は MIT License です（[LICENSE](LICENSE)）。
 * **KiwiClient**（<https://github.com/jks-prv/kiwiclient>）は**このリポジトリに含めていません**。公開時点で、クライアント全体に対するライセンスファイルが確認できず、一部（`kiwi/rigctld.py`）は GPL-2.0 以降の表示があるためです。`mac/tools/fetch_kiwiclient.py` が、固定した 1 つのコミットを GitHub から**お使いの PC に**取得し、各ファイルの SHA-256 を検証します。無改変で使い、`mac/vendor/` は git の管理対象外です。
-* Python パッケージ numpy（BSD-3-Clause 系）と SoundCard（BSD-3-Clause）は pip で導入されます（同梱しません）。
+* Python パッケージ numpy（BSD-3-Clause 系）、SoundCard（BSD-3-Clause）、pyserial（BSD-3-Clause。CardputerとのUSB接続用）は pip で導入されます（同梱しません）。
 * ファームウェアの `.bin` には、M5Cardputer / M5Unified / M5GFX / ArduinoJson（いずれも MIT）と、ESP32 Arduino コア（LGPL-2.1。ESP-IDF は Apache-2.0）が含まれます。ソースから `firmware/build.sh` で再ビルド・再書き込みできます。
 * `globe_land.h` は Natural Earth 1:110m（パブリックドメイン）から作った地球儀の陸地データで、作者の以前のプロジェクト（MIT）から無改変で取り込みました。
 * `receiver_candidates.json` は公開 KiwiSDR 一覧から生成した**候補リスト**で、各受信機が自己公開している情報だけを含みます。**今日接続できることを示すものではありません。** 各受信機は運営者のものです。運営者のルール（時間制限・人数制限・パスワード）を守ってください。

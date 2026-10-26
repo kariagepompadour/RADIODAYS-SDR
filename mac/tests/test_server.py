@@ -64,7 +64,7 @@ class ApiTests(unittest.TestCase):
     def test_state_has_fields_used_by_firmware(self):
         c, s = get(18765, '/state')
         self.assertEqual(c, 200)
-        for k in ('freq', 'mode', 'volume', 'muted', 'link', 'server', 'rssi', 's', 'in_level', 'out_level'):
+        for k in ('freq', 'mode', 'volume', 'muted', 'link', 'server', 'rssi', 's', 'in_level', 'out_level', 'unix_time'):
             self.assertIn(k, s)
 
     def test_tune_and_step(self):

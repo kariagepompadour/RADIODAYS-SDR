@@ -231,7 +231,7 @@ class RadioStart(unittest.TestCase):
         port = free_port()
         radio = Radio(e, port, '--open-manager')
         try:
-            self.assertEqual(e.opened(), ['http://127.0.0.1:%d/' % port])
+            self.assertEqual(e.opened(), ['http://127.0.0.1:%d/guide.html' % port])
             time.sleep(0.5)
             self.assertEqual(len(e.opened()), 1)
             self.assertEqual(rm.probe(port), 'ours')
@@ -292,7 +292,7 @@ class RadioStart(unittest.TestCase):
             out = radio.out()
             self.assertIn('already running', out)
             self.assertNotIn('NOT available', out)
-            self.assertEqual(e.opened(), ['http://127.0.0.1:%d/' % port])
+            self.assertEqual(e.opened(), [])  # repeated radio starts must not create duplicate browser tabs
             self.assertTrue(radio.state())
         finally:
             radio.close()

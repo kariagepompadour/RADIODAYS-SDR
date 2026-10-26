@@ -9,7 +9,8 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .02em; }
 h1 .sub { font-weight: 400; color: var(--muted); }
 h2 { margin: 0 0 4px; font-size: 16px; }
 .muted { color: var(--muted); }
-.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 14px 18px 6px; }
+.top { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 8px 18px 6px; }
+.tools { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .titleblock p { margin: 2px 0 0; max-width: 70ch; }
 .banner { margin: 6px 18px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); background: #fff7e6; }
 .banner.bad { background: #fdecea; border-color: #f0b4ae; }
@@ -87,6 +88,9 @@ footer { padding: 6px 18px 28px; font-size: 12.5px; max-width: 110ch; }
 .gsec h2 { font-size: 17px; border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 8px; }
 .gsec h3 { font-size: 14.5px; margin: 14px 0 4px; }
 .gsec p { margin: 6px 0; } .gsec ul { margin: 6px 0; padding-left: 1.4em; } .gsec li { margin: 3px 0; }
+.start-here { margin: 10px 0 18px; padding: 14px 16px; border: 3px solid var(--accent); border-radius: 8px; background: #fff3db; box-shadow: 0 2px 8px rgba(180,102,13,.14); }
+.start-here > strong { display: block; margin-bottom: 5px; color: #8f4f08; font-size: 18px; letter-spacing: .08em; }
+.start-here > p { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.65; font-weight: 700; }
 table.keys, table.plain { border-collapse: collapse; margin: 8px 0; width: 100%; }
 table.keys td, table.plain td, table.plain th { border-bottom: 1px solid #eeece5; padding: 5px 8px; vertical-align: top; }
 table.keys td.k { white-space: nowrap; width: 1%; }

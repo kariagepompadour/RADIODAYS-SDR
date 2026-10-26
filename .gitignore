@@ -37,3 +37,9 @@ HANDOFF_*.md
 
 # Temporary clearly-named real-device install candidate; remove after the Launcher test
 firmware/bin/RDSDR_v110_BOTH_BOLD.bin
+
+# Versioned local copies written by firmware/build.sh and the USB comparison probes (not published; the four
+# RadioDays_SDR.ino.* images and SHA256SUMS.txt are the release files)
+firmware/bin/SDR-*.ino.bin
+firmware/bin/RDSDR_SDR-*_MERGED.bin
+firmware/bin/USB-PROBE-*.ino.bin

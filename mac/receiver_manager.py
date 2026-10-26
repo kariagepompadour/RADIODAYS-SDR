@@ -37,7 +37,11 @@ DEFAULT_PORT = 8780
 WEB_DIR = os.path.join(HERE, 'manager')
 STATIC = {'/': ('index.html', 'text/html; charset=utf-8'), '/index.html': ('index.html', 'text/html; charset=utf-8'),
           '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'),
-          '/guide': ('guide.html', 'text/html; charset=utf-8'), '/guide.html': ('guide.html', 'text/html; charset=utf-8'),
+          '/guide': ('radio/index.html', 'text/html; charset=utf-8'), '/guide.html': ('radio/index.html', 'text/html; charset=utf-8'),
+          '/radio/app.js': ('radio/app.js', 'text/javascript; charset=utf-8'), '/radio/style.css': ('radio/style.css', 'text/css; charset=utf-8'),
+          '/radio/wifi-toggle.js': ('radio/wifi-toggle.js', 'text/javascript; charset=utf-8'),
+          '/radio/assets/cardputer-main.png': ('radio/assets/cardputer-main.png', 'image/png'),
+          '/guide-details.html': ('guide.html', 'text/html; charset=utf-8'),
           '/guide.js': ('guide.js', 'text/javascript; charset=utf-8'), '/guide.json': ('guide.json', 'application/json; charset=utf-8')}
 APP_ID = 'RADIO DAYS SDR Receiver Manager'     # what /api/identify answers: how a second start tells "ours" from some other program on the port
 BULK_CONCURRENCY = 4        # at most this many HTTP checks run at once (enforced here; the page's bulk run uses the same number)
@@ -192,6 +196,57 @@ class Manager:
             servers, _ = self.store.load_with_fallback()
             return servers
 
+    def radio_state(self):
+        """Live state for the interactive Operation Guide. The Engine remains the single source of truth."""
+        servers = [{'index': i, 'short': s['short'], 'name': s['name'],
+                    'lat': s.get('lat'), 'lon': s.get('lon'),
+                    'has_position': s.get('lat') is not None and s.get('lon') is not None}
+                   for i, s in enumerate(self._servers_for_ui())]
+        if self.engine is None:
+            return {'running': False, 'freq': 7100.0, 'mode': 'am', 'volume': 70, 'muted': False,
+                    'scan': 'off', 'output': 'mac', 'link': 'off', 's': 0, 'server_index': 0, 'servers': servers}
+        state = self.engine.state()
+        state['running'] = True
+        state['servers'] = servers
+        return state
+
+    def radio_action(self, data):
+        """Apply a browser control through the same Engine methods used by the Cardputer API."""
+        if self.engine is None:
+            raise ValueError('RADIO DAYS SDR is not running; start it to enable live controls')
+        action, value = str(data.get('action', '')), data.get('value')
+        if action == 'step':
+            step = float(data.get('step', 5))
+            if step not in (0.1, 1.0, 5.0, 10.0) or int(value) not in (-1, 1):
+                raise ValueError('invalid tuning step')
+            self.engine.set_freq(self.engine.freq + int(value) * step)
+        elif action == 'frequency':
+            freq = float(value)
+            if not 10 <= freq <= 30000:
+                raise ValueError('frequency must be 10–30000 kHz')
+            self.engine.set_freq(freq)
+        elif action == 'mode':
+            self.engine.set_mode(str(value).lower())
+        elif action == 'volume-delta':
+            self.engine.set_volume(self.engine.volume + int(value))
+        elif action == 'mute':
+            self.engine.set_muted(not self.engine.muted)
+        elif action == 'scan':
+            self.engine.start_scan(1 if int(value or 1) >= 0 else -1, float(data.get('step', 5)))
+        elif action == 'scan-stop':
+            self.engine.stop_scan()
+        elif action == 'server':
+            self.engine.switch_server(int(value))
+        elif action == 'server-delta':
+            self.engine.switch_server((self.engine.server_index + int(value)) % len(self.engine.servers))
+        elif action == 'output':
+            self.engine.set_output('cardputer' if self.engine.output == 'mac' else 'mac')
+        elif action in ('wifi', 'wifi-toggle', 'mac-ip', 'help', 'globe', 'diagnostics', 'radio'):
+            self.engine.request_card_command(action)
+        else:
+            raise ValueError('unknown radio action')
+        return self.radio_state()
+
     def save(self, servers, base_mtime=None, force=False):
         """Validate + save + load into the running program.  Returns the report for the browser."""
         existing_pw = {}
@@ -289,6 +344,8 @@ def make_handler(mgr, port):
                     return self._send(404, {'ok': False, 'error': 'missing ' + fname})
             if path == '/api/state':
                 return self._send(200, mgr.state())
+            if path == '/api/radio/state':
+                return self._send(200, mgr.radio_state())
             if path == '/api/identify':
                 return self._send(200, {'app': APP_ID, 'running': mgr.engine is not None})
             if path == '/api/check-history':
@@ -331,6 +388,8 @@ def make_handler(mgr, port):
                     host, port_ = str(data.get('host', '')).strip(), data.get('port', 8073)
                     servers_store.clean_server({'host': host, 'port': port_, 'name': host}, 0)   # same host/port rules as the list
                     return self._send(200, mgr.run_check('audio' if data.get('level') == 'audio' else 'status', host, int(port_)))
+                if path == '/api/radio/action':
+                    return self._send(200, mgr.radio_action(data))
             except ConflictError as e:
                 return self._send(409, {'ok': False, 'code': 'conflict', 'error': str(e)})
             except servers_store.ServersError as e:

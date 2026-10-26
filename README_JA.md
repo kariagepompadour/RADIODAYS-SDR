@@ -18,7 +18,17 @@
 **M5Stack Cardputer ADV**（＋ **U135 ロータリーエンコーダ**）をリモコン、**Mac または Windows 11 の PC** を本体として使います。
 地球儀に表示する受信機を、ブラウザで選び・並べ替え・編集できる **Receiver Manager** を含みます。
 
+ブラウザの **操作ガイドは、そのままPC用のライブ操作画面** でもあります。Cardputer画面をミラー表示し、
+同じPython無線エンジンを操作するため、Cardputerを購入・接続する前でもPCとブラウザだけでRADIO DAYS SDRを試せます。
+Cardputerを接続した場合は、実機とブラウザの操作・表示が同期します。
+
+**Web画面はCardputerの代用品ではありません。** 同じPCラジオ本体に対する、もう一つの入力・表示装置です。
+購入前のお試し、設定、補助操作には使えますが、本来の体験は、小さなコンピューターを手に持ってダイヤルを回し、
+その小さな筐体から遠くの放送が聞こえてくることです。そこに、この作品の意味があります。Web画面はMacまたはWindows PC上の
+Pythonプログラムが提供するもので、単独公開されたWebページではなく、スマートフォンだけで使うものでもありません。
+
 > **状態: 個人の趣味のプロジェクトです。v1.10 GUIはCardputer ADV実機へ書き込み、2026年10月25日に見た目と主要操作を作者が確認・承認しました。OS共通表記にした最終版はPC上の全回帰テストに合格し、同日にLauncher（Wi-Fi）でCardputerへ導入して、ノブ選局、音量、MANUAL/AUTO、地球儀、OUT ADVでの30分再生を作者が確認しました（聴感での確認で、測定はしていません）。**
+> **SDR-1.28ではCardputer ADVとの有線接続にTinyUSBを使用します。実機試験で、CardputerのWi-FiをOFFにした状態でもUSB制御とOUT ADVが動作することを確認しました。保存設定を消さずWi-Fiを一時停止でき、G/D画面の双方向同期にも対応します。**
 > **Windows 11 は 1 台の PC で試しました**（Windows 11、Python 3.12.10、Cardputer ADV 実機）。起動、Receiver Manager、Cardputer との接続、音量・ミュート・出力先の切替、終了は動作しました。他の Windows PC や長時間の使用は未検証です。
 > 頼りにする前に、下の「確認できていること・いないこと」を読んでください。Linux は未対応・未検証です。
 
@@ -29,14 +39,14 @@
 ## 役割分担
 
 ```
-Cardputer ADV ──Wi-Fi: HTTP 8765 / UDP 8766 / 音声 TCP 8767──▶ Mac / Windows PC (radiodays_sdr.py) ──WebSocket──▶ KiwiSDR（インターネット）
+Cardputer ADV ──USBシリアル（操作）、またはWi-Fi（操作＋OUT ADV音声）──▶ Mac / Windows PC ──WebSocket──▶ KiwiSDR
  ノブ・キー・画面                                              デコード・音量・AUTO 選局・音の出力
-                                                                Receiver Manager（ブラウザ, 127.0.0.1:8780）
+                                                                Webラジオ／Receiver Manager（PCブラウザ, 127.0.0.1:8780）
 ```
 
 | | Cardputer ADV | PC（Mac または Windows 11） |
 |---|---|---|
-| 役割 | リモコンと表示: 周波数・モード・音量・地球儀での受信機選択・状態灯。希望すれば内蔵スピーカーで音を出す（`O` キー） | 実際の処理: KiwiSDR への接続、音声のデコード、再生（または Cardputer への音声送信）、AUTO 選局、受信機一覧 `mac/servers.json` の管理、Receiver Manager 画面の提供 |
+| 役割 | リモコンと表示: 周波数・モード・音量・地球儀での受信機選択・状態灯。希望すれば内蔵スピーカーで音を出す（`O` キー） | 実際の処理: KiwiSDR への接続、音声のデコード、再生（または Cardputer への音声送信）、AUTO 選局、受信機一覧 `mac/servers.json` の管理、ライブWebラジオとReceiver Managerの提供 |
 | ソフト | `firmware/RadioDays_SDR/RadioDays_SDR.ino`（コンパイル済みは `firmware/bin/`） | `mac/radiodays_sdr.py`（フォルダ名 `mac` は経緯によるもので、Mac と Windows の共通です）。下の OS 別の起動ファイルで起動 |
 
 Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の通信状態、MANUAL/AUTO、AM/USB/LSB、選局刻み幅（0.1 / 1 / 5 / 10 kHz）を5段にまとめています。通信の3灯は緑=正常、黄=接続中、赤=異常。それ以外はアンバーが選択中です。
@@ -45,7 +55,7 @@ Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の
 
 * **macOS** または **Windows 11**、**Python 3.9 以上**（Mac: `python3 --version` で確認、無ければ `brew install python`。Windows: <https://www.python.org/downloads/windows/> から導入し、**「Add python.exe to PATH」にチェック**）、初回起動時のインターネット接続。
   残り（`numpy`、`soundcard`（と `cffi`）、KiwiClient ライブラリ）は、起動ファイルが `mac/.venv` に自動で導入します。他に必要なものはありません。
-* M5Stack **Cardputer ADV**（＋ U135）。Cardputer とパソコンは**同じ LAN**に接続（ゲスト Wi-Fi など端末間通信を禁止するネットワークは不可）。
+* M5Stack **Cardputer ADV**（＋ U135）。USBだけで**OUT PC／OUT ADVの両方**を利用でき、CardputerのWi-Fiは任意です。USBを使わずWi-Fi接続する場合はCardputerとPCを同じLANへ接続します（端末間通信を禁止するゲストWi-Fiは不可）。
 * ファームウェアを自分でビルドする場合: `arduino-cli`、コア `m5stack:esp32` 3.3.10、ライブラリ M5Cardputer / M5Unified / M5GFX / ArduinoJson 7（[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 参照）。
 
 ## どのファイルをダブルクリックするか
@@ -54,7 +64,7 @@ Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の
 
 | | macOS | Windows 11 |
 |---|---|---|
-| **ラジオを聴く**（ラジオを起動し、Receiver Manager をブラウザで開く） | `Start RADIO DAYS Mac.command` | `Start RADIO DAYS Win.bat` |
+| **ラジオを聴く**（ラジオを起動し、Web Controller をブラウザで開く） | `Start RADIO DAYS Mac.command` | `Start RADIO DAYS Win.bat` |
 | 受信機の一覧だけ編集する（ラジオは起動**しない**） | `Open Receiver Manager Mac.command` | `Open Receiver Manager Win.bat` |
 
 通常は、**自分の OS の上の段のファイルだけ**をダブルクリックします。下の段はラジオなしで一覧を編集したいときだけで、両方を起動する必要はありません。
@@ -87,7 +97,7 @@ Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の
 **Cardputer ADV 単体ではSDR放送を受信できません。** 受信には、Macまたは
 Windows PC上で動作するRADIO DAYS SDRプログラム（Receiver Managerを含む）、
 そのPCからKiwiSDR受信機へ接続するためのインターネット接続、および
-CardputerとPC間のネットワーク接続が必要です。
+CardputerとPC間のUSB接続またはLAN接続が必要です。USBだけで操作、地球儀の受信地一覧・地点表示・選局、OUT PC／OUT ADVの音声が動作します。Cardputer側のWi-Fiは代替接続として任意です。
 
 ### M5Burnerでインストールする
 
@@ -109,18 +119,19 @@ esptool --chip esp32s3 --port /dev/cu.usbmodemXXXX write-flash 0x0 firmware/bin/
 ```
 
 書き込めないときは、側面ボタン（G0）を押したまま電源を入れる（ダウンロードモード）。**本体の既存ファームウェア（例: ネットラジオ版 RADIO DAYS）は消えます。**
-ソースからビルドする場合は `firmware/build.sh`。このリポジトリの `.ino` と `.bin` は同じソースから作った一組です（版番号 `SDR-1.10`）。
+ソースからビルドする場合は `firmware/build.sh`。このリポジトリの `.ino` と `.bin` は同じソースから作った一組です（版番号 `SDR-1.28`）。
 
-初回起動: Wi-Fi 一覧から選び（`;` `.` またはノブ、ENTER）、パスワードを入力して ENTER。PC は自動検出されます。検出されないときは `I` キーで、起動ファイルのウィンドウに出た IP アドレスを入力します。
+**OUT PC／USB経由のOUT ADV:** PCでRADIO DAYSを起動し、USBを接続してからCardputerの電源／アプリを起動します。操作と音声は自動検出され、CardputerのWi-Fi設定は不要です。実機試験では、アプリ動作中にUSBを抜いて挿し直しただけでは`CABLE ok`へ戻らない場合がありました。その場合はUSBを接続したままCardputerを再起動してください。**Wi-Fi利用:** `W`を押すと再スキャンし、接続先を選んでパスワードを入力します。接続成功時だけ最大3件まで保存します。Wi-Fi設定画面で`S`を押すと保存済み一覧、`DEL`で削除、`X`で保存内容を消さずWi-Fiを一時OFF/ONにできます。USBを使わない場合はPCと同じLANへ接続し、自動検出できないときだけ`I`でPCのIPアドレスを入力します。
+時計はWi-FiのNTPだけでなく、USB経由でもPCの時刻に同期します。最良の時刻を10分間隔で保存してオフライン起動時に復元し、利用可能なら内蔵RTCにも書き込みます。物理RTCが使えない個体では完全な電源断中の経過時間を測れないため、保存値は最後の記録地点から再開する予備時計です。
 **Cardputer の表示について:** v1.10の通常画面は、左上が背の低い横長のSIGNAL/VOLUMEアナログメーター、右上が上端にそろえた5段の状態表示、その下が上へ詰めた横長のチューニング目盛りです。右上の5段は等高で、1pxの薄い灰色罫線により分け、M5Stackの裏面印刷を意識して青・緑・橙・赤・紫の文字で機能別に色分けしています。通信LEDの緑・黄・赤という状態の意味は維持します。計器の黒い縁は原則1pxで、盤面の上・左内側の灰色影により凹みを表現しています。最下部は、周波数・受信状態用とG-SHOCK風の時計用を別々の窪みにした、黒地・蛍光緑の2個の液晶です。上下の銀色レールは等高で、左は上下4本ずつ、時計は上下2本ずつのマイナスねじを液晶外側に見せています。受信周波数と時計の時刻は、どちらも大きく太いビットマップ数字です。単位`kHz`と状態行は小さな通常文字のままです。古い受信機へ現代の時計モジュールを後付けした外観を意図しています。モード変更時はAM=5 kHz、USB/LSB=1 kHzの推奨刻み幅になります。地球儀画面の人工衛星は初代RADIO DAYSと同じように漂い、地球と電波をやり取りします。Cardputerの接続案内はOS共通の`PC`表記です。
 5段パネルは各段を同じ高さにそろえ、区切り線は薄い灰色です。下段の2個の液晶は、表示面の上下に同じ高さの銀色レールを設けています。
-Receiver Manager と操作ガイドの画面は**英語が初期表示**です。上部の **日本語 / EN** ボタンで切り替えられ、選んだ言語はそのブラウザに記憶されます。
+ライブWebラジオは国際利用向けに**英語表示**です。詳しい操作ガイドには従来どおり **日本語 / EN** の切替があり、選んだ言語はそのブラウザに記憶されます。
 
 操作の早見表は **操作ガイド**（[日本語](docs/QUICK_GUIDE_JA.md) / [English](docs/QUICK_GUIDE_EN.md)。Receiver Manager 画面の上部のボタンからも開けます）、詳細は [docs/OPERATION_JA.md](docs/OPERATION_JA.md)。要点: ノブ = 選局、ノブを押しながら回す = 音量、`G` = 地球儀、`Tab`/`T` = MANUAL⇄AUTO、`O` = 音の出力先、`D` = 診断、`H` = ヘルプ。
 
 ## Receiver Manager（受信機の選択・並べ替え）
 
-**「Start RADIO DAYS」の起動ファイル（Mac: `Start RADIO DAYS Mac.command`、Windows: `Start RADIO DAYS Win.bat`）は、起動のたびに、既定のブラウザで Receiver Manager を自動的に開きます**（アドレスは **<http://127.0.0.1:8780/>**。ラジオの動作中に自分で入力して開くこともできます）。ブラウザのタブを閉じてもラジオは止まりません。ブラウザを開けなかったときは、Terminal にアドレスを表示し、ラジオはそのまま動きます。
+**「Start RADIO DAYS」の起動ファイル（Mac: `Start RADIO DAYS Mac.command`、Windows: `Start RADIO DAYS Win.bat`）は、起動のたびに、既定のブラウザで Web Controller を自動的に開きます**（アドレスは **<http://127.0.0.1:8780/guide.html>**。ラジオの動作中に自分で入力して開くこともできます）。ブラウザのタブを閉じてもラジオは止まりません。ブラウザを開けなかったときは、Terminal にアドレスを表示し、ラジオはそのまま動きます。
 通常のラジオ利用では **「Start RADIO DAYS」のファイルだけ**を起動します。「Open Receiver Manager」のファイル（`... Mac.command` / `... Win.bat`）は、**ラジオを起動せずに**一覧だけ編集したいとき用です（こちらも毎回ブラウザを開きます）。すでに Receiver Manager が動いているときは、2 つ目を起動せず、既存の画面を開きます。
 ポート 8780 を別のプログラムが使っているときは、ウィンドウにその旨と調べ方（Mac は `lsof`、Windows は `netstat`。または `--manager-port` / `--port` で別の番号を指定）を表示します。ポートが使用中というだけでは RADIO DAYS のものとは見なさず、そのポートのプログラムが自分は RADIO DAYS の Receiver Manager だと名乗ったときだけ、既存の画面として扱います。
 画面は PC 側のプログラムが**この PC の中だけ**（`127.0.0.1`）に提供し、そのプログラム経由で `mac/servers.json` を読み書きします。
@@ -136,7 +147,7 @@ Receiver Manager と操作ガイドの画面は**英語が初期表示**です�
   * **HTTP の一括再確認**（「登録済みをHTTP再確認」「表示中の候補をHTTP一括確認」を押したときだけ）: 台数を示して確認を求め、同時に最大 4 件・少し間隔をあけて順番に問い合わせ、途中で中止できます。プログラム側でも、同時に実行する HTTP確認は 4 件を超えません。音声確認の一括実行はありません。
   * 候補は**「接続できる」と断定して表示しません**。一覧は公開一覧のある時点のスナップショットです（日付は画面と `mac/manager/receiver_candidates.json` に記録）。プロキシ経由の受信機（`*.proxy.kiwisdr.com`）はポート 8073 を仮定しており、「ポート仮定」と表示します。
   * 候補の位置は各受信機の自己申告です。確認のうえ使ってください。位置のない受信機は「位置未確認」と表示され、地球儀に点は出ません。
-* **操作ガイド**: 画面上部のボタンで、操作早見表（基本操作・受信機の選択・MANUAL/AUTO・音声出力・Receiver Manager・右上の5段状態表示・接続トラブル）を別タブで開きます（日本語/英語）。文面は `mac/manager/guide.json` の 1 か所だけで、`docs/QUICK_GUIDE_*.md` はそこから生成します。
+* **ライブ操作ガイド／Webラジオ**: 画面上部のボタンで、Cardputer風のライブ操作画面を開きます。ラジオ状態を反映し、キーボード・ボタン・JOGから操作でき、受信機を選ぶ地球画面も含みます。Pythonラジオ本体が動いていればCardputerなしでも使用できます。**詳しい操作ガイド**から従来の日本語／英語の早見表を開けます。文面の原本は引き続き `mac/manager/guide.json` で、`docs/QUICK_GUIDE_*.md` はそこから生成します。
 * **保存の安全性**: 先に入力を検証します（ホスト、ポート 1〜65535、名前は ASCII で 43 / 20 文字以内、緯度経度、重複なし、1〜32 台）。新しい内容は一時ファイルに書いて確実にディスクへ書き出し、読み戻して一致を確認してから、一度の置き換えで反映します。直前の正常なファイルは `mac/servers.json.bak` と `mac/.servers_backups/`（最新 10 個）に残ります。壊れた `servers.json` は `servers.json.corrupt-<時刻>` として保存し、プログラムは直前の正常なコピーで起動します。**「直前の保存に戻す」**で元に戻せます。画面を開いた後に別の場所でファイルが変わっていたときは、上書き前に確認します。
 * **セキュリティ**: 画面は `127.0.0.1` だけで待ち受けます。リクエストには正しい `Host`・外部ではない `Origin`・専用ヘッダ・JSON が必要です。パスワードはブラウザに送らず、「設定済み」とだけ伝えます。`servers.json` はモード 600 で保存します。
 
@@ -150,6 +161,7 @@ Receiver Manager と操作ガイドの画面は**英語が初期表示**です�
 ## ネットワークについて
 
 * PC 側プログラムの API（TCP 8765）・探索（UDP 8766）・Cardputer スピーカー用音声（TCP 8767）は、Mac の**すべてのネットワークインターフェース**で待ち受け、共有トークン（既定 `RADIO_DAYS_LOCAL_2026`。ファームウェアに埋め込み、`--token` で指定）だけで守られています。信頼できる家庭内 LAN 向けです。トークンは**秘密ではなく**、信頼できないネットワークには向きません。変えるには `.ino` の `TOKEN` を変えてビルド・書き込みし、Mac 側を `--token` 付きで起動します。
+* USB制御はEspressif/M5Stackのシリアル機器を自動検出し、操作と状態だけを運びます。音声は運びません。無効化は`--serial-port off`、明示指定は`--serial-port COM4`または`--serial-port /dev/cu.usbmodem...`です。
 * Receiver Manager（TCP 8780）は自分の PC だけ（loopback）です。`--manager-port 0` で無効にできます。
 * 同じ IP アドレスからの 2 つ目の接続を断る KiwiSDR が多くあります。同じ受信機に 2 つのプログラムから同時に繋がないでください。
 
@@ -163,6 +175,8 @@ Receiver Manager と操作ガイドの画面は**英語が初期表示**です�
 | 実際の KiwiSDR からの受信、実際の受信機での AUTO 選局 | **テスト済み・実機の KiwiSDR**（2026-10-23/24。受信できるかは時間帯と受信機による） |
 | Receiver Manager: 保存と検証、原子的な保存・バックアップ・復元、壊れたファイルへの退避、HTTP のセキュリティ（Host/Origin/CSRF/サイズ）、競合検出、確認結果の文言、候補ファイルの形式 | **テスト済み**（自動テスト 26 件: 保存・セキュリティ 14 件 + 確認履歴・一括確認の上限・記録 12 件） |
 | Receiver Manager 画面のロジック（並べ替え、検証、送信内容、フィルタ、結果の文言） | **テスト済み**（Node テスト 15 件。日時の日本語/英語表記と一括実行の同時数の上限も含む） |
+| ライブ Web ラジオ: ページと画像、同期状態 API、操作命令 | **テスト済み**（自動テスト 3 件。ブラウザ表示と受信機切替も 2026-10-26 に手動確認） |
+| Cardputer USB制御プロトコルとUSB/HTTP共通の操作処理 | **2026年10月27日にSDR-1.28で実機確認済み**: macOS上でTinyUSBとして認識され、`CABLE ok` を確認し、CardputerのWi-FiをOFFにした状態でも動作を継続しました。動作中のUSB抜き差し後はCardputerの再起動が必要な場合があります。 |
 | 動作中のプログラムに対するブラウザ画面の通し試験: 候補の選択、並べ替え、保存、動作中プログラムの `/servers` に新しい一覧が出ること、バックアップとファイルの書き出し | **テスト済み**（ブラウザでの手動操作、2026-10-24） |
 | 公開一覧の日本の候補への確認（2026-10-24、2 回）: HTTP 確認は 2 回とも 25 台中 23 台が応答（同じ 23 台とは限りません）。1 台（Adachi）で音声確認を実行し音声ブロックが届いた | **実機の KiwiSDR・ある時点の分**。他の時間については何も言えません |
 | 確認履歴がページの再読み込み後も表示される／HTTP と音声が別々に記録される／日本の候補 25 台の一括 HTTP 確認が同時 4 件以内で動く／画面を開いただけでは確認リクエストが出ない／操作ガイドが別タブで日本語・英語で開く | **テスト済み**（ブラウザ、2026-10-24） |
@@ -180,7 +194,7 @@ Receiver Manager と操作ガイドの画面は**英語が初期表示**です�
 
 ```bash
 cd mac
-.venv/bin/python -m unittest discover -s tests -p "test_*.py"     # 105 件。音量テストは BlackHole 2ch があるときだけ実行（無ければスキップ）
+.venv/bin/python -m unittest discover -s tests -p "test_*.py"     # 111 件。音量テストは BlackHole 2ch があるときだけ実行（無ければスキップ）
 node tests/js/test_logic.js                                       # Receiver Manager 画面のロジック
 cd ../firmware/tools/host_render && M5GFX=/path/to/libraries/M5GFX ./run.sh   # 画面描画テスト（PC 上。g++ が必要）
 cd ../host_tests && PYTHON=../../../mac/.venv/bin/python ./run.sh             # 音声プロトコル・再生規則のテスト（PC 上）
@@ -198,8 +212,8 @@ mac/platform_support.py        OS ごとに違う少数の部分（LAN アドレ
 mac/servers_store.py           servers.json の検証つき・破損しにくい読み書き
 mac/receiver_manager.py        Receiver Manager のバックエンド（loopback の HTTP）
 mac/check_history.py           受信機ごとの確認履歴（check_history.json）
-mac/manager/                   Receiver Manager 画面（index.html, app.js, style.css, receiver_candidates.json）
-                               と操作ガイド（guide.html, guide.js, guide.json = ガイド文面の唯一の原本）
+mac/manager/                   Receiver Manager と詳細操作ガイド
+mac/manager/radio/             Cardputer 風ライブ Web ラジオ、操作部、表示画像
 mac/servers.default.json       初期の一覧
 mac/tools/                     fetch_kiwiclient.py, build_candidates.py, kiwi_position.py, build_guide_docs.py
 mac/tests/                     自動テスト（live_*.py は実際の受信機を使います）

@@ -135,8 +135,10 @@ class GuideServed(unittest.TestCase):
         for p in ('/guide', '/guide.html', '/guide.js', '/guide.json'):
             self.assertIn(p, rm.STATIC)
         html = read(MAC, 'manager', 'index.html')
-        self.assertRegex(html, r'<a id="guide"[^>]*href="/guide.html"[^>]*target="_blank"')
-        self.assertNotRegex(html, r'(?i)window\.open|<iframe')               # the guide opens only when clicked, in its own tab
+        self.assertRegex(html, r'<a id="guide"[^>]*href="/guide.html"[^>]*>WEB CONTROLLER</a>')
+        labels = ('RECEIVER MANAGER', 'WEB CONTROLLER', 'OPERATION GUIDE')
+        self.assertEqual(sorted(html.index(label) for label in labels), [html.index(label) for label in labels])
+        self.assertNotRegex(html, r'(?i)window\.open|<iframe|target="_blank"')  # common navigation stays in one tab
 
 
 if __name__ == '__main__':

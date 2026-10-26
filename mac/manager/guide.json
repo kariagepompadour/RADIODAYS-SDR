@@ -5,8 +5,8 @@
   "en": "Operation Guide"
  },
  "subtitle": {
-  "ja": "RADIO DAYS SDR 操作早見表（v1.7）",
-  "en": "RADIO DAYS SDR quick reference (v1.7)"
+  "ja": "RADIO DAYS SDR 操作早見表",
+  "en": "RADIO DAYS SDR quick reference"
  },
  "intro": {
   "ja": "Cardputer ADV と PC（Mac / Windows）の基本操作の早見表です。詳しい説明は docs/OPERATION_JA.md（日本語）にあります。",
@@ -23,9 +23,10 @@
    "blocks": [
     {
      "type": "p",
+     "emphasis": "start",
      "text": {
-      "ja": "使う順番: ① パソコンの起動ファイルをダブルクリック（Mac: Start RADIO DAYS Mac.command ／ Windows 11: Start RADIO DAYS Win.bat）→ ② Cardputer ADV の電源を入れ、初回は Wi-Fi を選んでパスワードを入力 → ③ 画面右上の WiFi / PC / Kiwi の灯が緑になるのを待つ（パソコンは自動で見つかります）。パソコンと Cardputer は同じ LAN に接続してください。",
-      "en": "Order of use: (1) double-click the start file for your computer (Mac: Start RADIO DAYS Mac.command / Windows 11: Start RADIO DAYS Win.bat), (2) switch the Cardputer ADV on and, the first time, pick a Wi-Fi and type its password, (3) wait for the WiFi / PC / Kiwi lamps at the top right to turn green (the computer is found automatically). The computer and the Cardputer must be on the same LAN."
+      "ja": "使う順番: ① パソコンの起動ファイルをダブルクリック（Mac: Start RADIO DAYS Mac.command ／ Windows 11: Start RADIO DAYS Win.bat）→ ② Cardputer ADV をUSB接続して電源を入れる。OUT PCもOUT ADVもUSBだけで利用でき、CardputerのWi-Fiは不要です。動作中にUSBを抜き挿ししてCABLE okへ戻らない場合は、USBを接続したままCardputerを再起動してください。",
+      "en": "Order of use: (1) double-click the start file for your computer (Mac: Start RADIO DAYS Mac.command / Windows 11: Start RADIO DAYS Win.bat), (2) connect the Cardputer ADV by USB and switch it on. USB alone supports both OUT PC and OUT ADV; Cardputer Wi-Fi is optional. If a hot replug does not restore CABLE ok, leave USB connected and restart the Cardputer."
      }
     },
     {
@@ -125,8 +126,17 @@
         "W"
        ],
        "text": {
-        "ja": "Wi-Fi の設定画面（一覧から選んでパスワードを入力）",
-        "en": "Wi-Fi setup (pick a network and type its password)"
+        "ja": "Wi-Fi設定画面を開いて再スキャン。一覧から接続先を選び、パスワードを入力する。接続に成功した場合だけ最大3件まで保存される（S=保存済み一覧、DEL=削除、X=保存内容を消さずWi-Fiを一時OFF/ON）",
+        "en": "open Wi-Fi setup and rescan. Choose a network and enter its password. Only a successful connection is saved, up to three networks (S=saved list, DEL=delete, X=temporarily turn Wi-Fi OFF/ON without erasing saved networks)"
+       }
+      },
+      {
+       "keys": [
+        "X"
+       ],
+       "text": {
+        "ja": "Wi-Fi設定画面でWi-Fiを一時OFF/ON。保存済みSSIDとパスワードは消えない",
+        "en": "in Wi-Fi setup, temporarily turn Wi-Fi OFF/ON; saved SSIDs and passwords are preserved"
        }
       },
       {
@@ -240,6 +250,10 @@
     {
      "type": "list",
      "items": [
+      {
+       "ja": "受信機一覧・位置・選局命令は PC との制御通信で運びます。USB接続だけで地点表示・選局・OUT PC・OUT ADVの再生ができます。Wi-FiはUSBを使わないときの代替経路です。Wi-Fiなし試験はW画面でXを押して一時OFFにします。",
+       "en": "The receiver list, locations and selection commands travel over the PC control link. USB alone supports globe locations, receiver selection, OUT PC and OUT ADV playback. Wi-Fi is an alternate path when USB is not used. For a no-Wi-Fi test, open W setup and press X to turn it off temporarily."
+      },
       {
        "ja": "一覧の中身と順番は Receiver Manager で決めます（下の「Receiver Manager の使い方」）。保存したあと、Cardputer で G をもう一度押すと新しい一覧になります。",
        "en": "The contents and order of the list are set in the Receiver Manager (see below). After saving, press G again on the Cardputer to see the new list."
@@ -381,8 +395,8 @@
     {
      "type": "p",
      "text": {
-      "ja": "起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）を開くと、ブラウザで Receiver Manager が自動的に開きます（起動のたびに毎回）。開かないとき・閉じたあとは、同じパソコンのブラウザで http://127.0.0.1:8780/ を開きます。ブラウザを閉じてもラジオは止まりません（止めるのは、起動したウィンドウで Ctrl+C）。ラジオを使うときは起動ファイルだけで足ります。「Open Receiver Manager Mac.command」/「Open Receiver Manager Win.bat」は、ラジオを起動せずに一覧だけ編集したいとき用で、すでに動いていれば既存の画面を開きます。この画面はそのパソコンの中だけで動き、他の端末からは開けません。",
-      "en": "Opening the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) opens the Receiver Manager in your browser by itself, every time. If it did not open, or after you closed it, open http://127.0.0.1:8780/ in a browser on the same computer. Closing the browser does not stop the radio (press Ctrl+C in the window that started it). For listening the start file alone is enough. \"Open Receiver Manager Mac.command\" / \"Open Receiver Manager Win.bat\" is only for editing the list without starting the radio; if a Receiver Manager is already running it opens the existing page. The page runs only on that computer and cannot be opened from other devices."
+      "ja": "起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）を開くと、Receiver Manager がまだ起動していない場合だけブラウザで自動的に開きます。重ねて起動しても同じ画面のタブは増やしません。開かないとき・閉じたあとは、同じパソコンのブラウザで http://127.0.0.1:8780/ を開きます。ブラウザを閉じてもラジオは止まりません（止めるのは、起動したウィンドウで Ctrl+C）。ラジオを使うときは起動ファイルだけで足ります。「Open Receiver Manager Mac.command」/「Open Receiver Manager Win.bat」は、ラジオを起動せずに一覧だけ編集したいとき用です。この画面はそのパソコンの中だけで動き、他の端末からは開けません。",
+      "en": "Opening the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) opens the Receiver Manager automatically only when it is not already running. Repeated starts do not create duplicate tabs. If it did not open, or after you closed it, open http://127.0.0.1:8780/ in a browser on the same computer. Closing the browser does not stop the radio (press Ctrl+C in the window that started it). For listening the start file alone is enough. \"Open Receiver Manager Mac.command\" / \"Open Receiver Manager Win.bat\" is only for editing the list without starting the radio. The page runs only on that computer and cannot be opened from other devices."
      }
     },
     {
@@ -515,16 +529,16 @@
         "en": "the PC-side program answers"
        },
        {
-        "ja": "Wi-Fi は繋がっているが PC が応答しない",
-        "en": "Wi-Fi is up but the PC does not answer"
+        "ja": "USBまたはWi-Fi経由でPCが応答しない",
+        "en": "the PC does not answer over USB or Wi-Fi"
        },
        {
         "ja": "—",
         "en": "—"
        },
        {
-        "ja": "Wi-Fi が未接続",
-        "en": "no Wi-Fi"
+        "ja": "Wi-Fi が未接続（OUT ADVのみ問題）",
+        "en": "no Wi-Fi (a problem only for OUT ADV)"
        }
       ],
       [
@@ -586,8 +600,8 @@
         "en": "W red or yellow / status line Wi-Fi: …"
        },
        {
-        "ja": "Cardputer が Wi-Fi に繋がっていない。W キーで Wi-Fi を選び直す。",
-        "en": "The Cardputer is not on Wi-Fi. Press W and choose the network again."
+        "ja": "Cardputer が Wi-Fi に繋がっていない。OUT PC＋USB制御なら正常です。OUT ADVで音を出すときだけ、WキーでWi-Fiを設定します。",
+        "en": "The Cardputer is not on Wi-Fi. That is normal for OUT PC with USB control. Press W to set up Wi-Fi only when using OUT ADV."
        }
       ],
       [
@@ -596,8 +610,8 @@
         "en": "P yellow / PC: searching… / PC: connect failed"
        },
        {
-        "ja": "パソコンのプログラムが動いていない、パソコンの IP が違う、または別のネットワーク。起動ファイル（Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat）が動いているか確認し、I キーで、起動したウィンドウに表示された PC IP を入力。ゲスト Wi-Fi など端末間通信を禁止するネットワークは使えません。ファイアウォールの許可ダイアログ（Windows では「プライベート ネットワーク」を許可）が出たら許可します。",
-        "en": "The PC-side program is not running, the IP is wrong, or the devices are on different networks. Check that the start file (Start RADIO DAYS Mac.command / Start RADIO DAYS Win.bat) is running and press I to type the PC IP shown in its window. Guest Wi-Fi that blocks device-to-device traffic does not work. Allow the firewall dialog if it appears (on Windows allow \"Private networks\")."
+        "ja": "パソコンのプログラムが動いていない、USBが外れている、またはWi-Fi経路のIP・ネットワークが違います。まず起動ファイルとUSBを確認します。Wi-Fi制御を使う場合はIキーでPC IPを入力し、ファイアウォールではプライベートネットワークを許可します。",
+        "en": "The PC-side program is not running, USB is disconnected, or the Wi-Fi path has the wrong IP/network. First check the start file and USB cable. For Wi-Fi control, use I to enter the PC IP and allow Private networks in the firewall."
        }
       ],
       [

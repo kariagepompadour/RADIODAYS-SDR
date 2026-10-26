@@ -1,6 +1,6 @@
 # Verification summary (English)
 
-The full, dated log (in Japanese) is [VERIFICATION_JA.md](VERIFICATION_JA.md). This is the short version for version **v1.10 (firmware tag `SDR-1.10`)**, checked on 2026-10-25 on one Mac.
+The full, dated log (in Japanese) is [VERIFICATION_JA.md](VERIFICATION_JA.md). This is the short version for version **v1.10 (firmware tag `SDR-1.10`)**, checked on 2026-10-25 on one Mac; the USB cable link added up to **`SDR-1.28`** is summarised in its own section below.
 
 **Software tests passing is not the same as working on the device.** Nothing below was run on a real Cardputer ADV.
 
@@ -43,6 +43,21 @@ The full, dated log (in Japanese) is [VERIFICATION_JA.md](VERIFICATION_JA.md). T
 5. Linux (**not supported**, not tested); other Macs/macOS versions; Finder double-click launch, Gatekeeper and local-network permission dialogs.
 6. Long runs, sleep/wake, other Wi-Fi setups.
 
+## SDR-1.28: USB cable link (2026-10-27)
+
+Checked on one Mac and one Cardputer ADV, with the app started from Launcher.
+
+| What | How | Result |
+|---|---|---|
+| Cable and Mac USB port | ROM download mode (no app running) | enumerated as `/dev/cu.usbmodem2101`: the cable carries data and the port works |
+| Hardware CDC (USB Serial/JTAG), the original USB mode | minimal probe app `firmware/tools/usb_probe` (no M5Unified, no Wi-Fi) | **never enumerated**: no USB frames from the host (`SOF STOPPED`, 0 bus resets) although the pad and D+ pull-up were enabled. Leftover USB-OTG routing from Launcher was ruled out (the PHY register read 0 at boot) |
+| TinyUSB CDC (USB-OTG) | minimal probe app `firmware/tools/usb_probe_tinyusb` | enumerated (`SOF moving`, `mount 1`, `cdc 1`, `/dev/cu.usbmodem80456B76A1101`); data passed both ways |
+| Firmware on TinyUSB | `SDR-1.26` diagnostics; `SDR-1.28` with `W` then `X` | `CABLE ok`, `USB SOF+ m1 cdc1`; with Cardputer Wi-Fi OFF, control and OUT ADV audio kept working over USB alone |
+| Unplugging and reinserting USB while the app runs | manual | **does not recover by itself**; restarting or power-cycling the Cardputer with USB connected restores `CABLE ok` (documented as an operating limitation) |
+| PC-side and firmware logic tests | `mac/tests` (117 tests), `node mac/tests/js/test_logic.js` (15), `firmware/tools/host_tests`, `firmware/tools/host_render` | all passed (0 failures) |
+
+Not verified for SDR-1.28: USB control on **Windows** (TinyUSB sends only while the host holds DTR), how much the replug-recovery attempts stall the Cardputer UI after the cable is removed, Wi-Fi-only control latency while no USB host is attached, the Web Controller `X` button on the device, and long runs.
+
 ## Files
 
-`firmware/bin/SHA256SUMS.txt` lists the checksums of the four prebuilt images. The `.ino` and the `.bin` files come from the same source (`SDR-1.10`).
+`firmware/bin/SHA256SUMS.txt` lists the checksums of the four prebuilt images. The `.ino` and the `.bin` files come from the same source (`SDR-1.28`).

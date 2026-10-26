@@ -1,6 +1,6 @@
 #!/bin/bash
 # RADIO DAYS SDR - Mac launcher (double-click in Finder, or run it in Terminal).
-# Starts the radio and opens the Receiver Manager (receiver list editor, http://127.0.0.1:8780/) in your browser every time.
+# Starts the radio and opens one Web Controller page (http://127.0.0.1:8780/guide.html); repeated starts do not add duplicate tabs.
 # Closing the browser does not stop the radio; Ctrl+C in this window does.
 cd "$(dirname "$0")/mac" || exit 1
 pause() { echo; echo "Enterキーで閉じます / Press Enter to close"; read -r; }
@@ -11,6 +11,9 @@ if [ ! -x .venv/bin/python ]; then
   "$PY" -m venv .venv || { echo "仮想環境の作成に失敗 / could not create the virtual environment"; pause; exit 1; }
   .venv/bin/python -m pip install -q -r requirements.txt || { echo "依存パッケージの導入に失敗（ネット接続を確認） / pip install failed (check the network)"; rm -rf .venv; pause; exit 1; }
 fi
+
+# An existing installation may predate USB control; install newly added requirements once.
+.venv/bin/python -c "import serial" 2>/dev/null || .venv/bin/python -m pip install -q -r requirements.txt || { echo "依存パッケージの更新に失敗 / dependency update failed"; pause; exit 1; }
 
 if [ ! -d vendor/kiwiclient/kiwi ]; then
   echo "KiwiClient を取得します（固定バージョン・SHA-256 検証付き） / Fetching KiwiClient (pinned version, SHA-256 verified)…"

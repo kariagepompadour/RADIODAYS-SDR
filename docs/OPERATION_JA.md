@@ -9,14 +9,15 @@
 
 ## 使い方
 
-1. 初回は Wi-Fi 一覧が出ます。`;` `.`（またはノブ）で選び ENTER → パスワード入力 → ENTER。TAB でパスワードの表示/非表示。最大 3 件を保存します。
-2. PC（Mac / Windows）と Cardputer は**同じ LAN**に接続してください（ゲスト Wi-Fi など端末間通信が禁止のネットワークは不可）。
-   PC は自動検出されます。検出できないときは `I` キーで PC の IP を手入力（起動したウィンドウに表示された `PC IP`）。
+1. **OUT PC／OUT ADV（USB）:** PC側プログラムを起動し、CardputerをUSB接続してからCardputerの電源／アプリを起動します。操作と音声は自動検出され、Cardputer側のWi-Fi設定は不要です。動作中にUSBを抜き挿しして`CABLE ok`へ戻らない場合は、USBを接続したままCardputerを再起動してください。
+2. **Wi-Fiを使う場合:** `W`で再スキャンし、`;` `.`（またはノブ）で選び ENTER → パスワード入力 → ENTER。PCと同じLANへ接続してください。接続成功時だけ最大3件まで保存します。`S`で保存済み一覧、`DEL`で削除、`X`で保存内容を消さずWi-Fiを一時OFF/ONにできます。間違ったパスワードは保存されません。
+   Wi-Fi利用時はPCを自動検出します。検出できないときは`I`キーでPCのIPを手入力します。Wi-Fiなし・USBのみの試験はW画面で`X`を押し、`Wi-Fi OFF (PC CABLE only)`を確認します。
+3. 右下の時計は、Wi-Fi接続時はNTP、USB接続時はPC時刻で同期します。同期値は10分間隔で保存し、利用可能なら内蔵RTCにも記録します。両方の接続がない場合も最後の時刻から表示を継続しますが、物理RTCがない場合は完全な電源断中の経過時間までは補正できません。
 3. 下部の黒緑液晶の状態行で、どこで止まっているかが分かります:
 
    | 表示 | 意味 | 対処 |
    |---|---|---|
-   | `Wi-Fi: …` | Cardputer が Wi-Fi に繋がっていない | `W` で設定 |
+   | `Wi-Fi: …` | Cardputer が Wi-Fi に繋がっていない | USB接続ならOUT PC／OUT ADVとも正常。Wi-Fiを使う場合だけ`W`で設定 |
    | `PC: searching…` / `PC: connect failed`(HTTP -1) | PC側プログラムが見つからない/動いていない | パソコンで「Start RADIO DAYS」の起動ファイル（Mac: `Start RADIO DAYS Mac.command` / Windows: `Start RADIO DAYS Win.bat`）を起動、IP・ファイアウォールを確認 |
    | `PC: read timeout`(HTTP -11) | PC が応答しない | PC側プログラムを再起動 |
    | `Kiwi: connecting …` / `Kiwi: <エラー>` | PC側プログラムは動いているが KiwiSDR に繋がらない | 自動で次のサーバーへ切り替わります。`N` で手動切替 |
@@ -24,21 +25,21 @@
 
 ### PC に繋がらないとき
 
-Wi-Fi は繋がっているのに PC から3秒以上応答が無いと、通常画面が次の案内に切り替わります（短い途切れでは出ません）。PCから応答が戻ると、自動で通常画面に戻ります。
+USBまたはWi-FiのどちらからもPCが3秒以上応答しないと、通常画面が次の案内に切り替わります。PCから応答が戻ると、自動で通常画面に戻ります。
 
 ```
 PC NOT CONNECTED
 Start RADIO DAYS on your PC.
-Check that its window stays open.
-Could also be a wrong PC IP address
-or a network problem (key I: set IP).
+Connect USB, or use the same Wi-Fi.
+OUT PC: USB is enough.
+OUT ADV: USB or Wi-Fi audio.
 Last error: connection refused      ← 実際のエラー内容
 PC IP: 192.168.1.23 (auto)          ← 使っている PC の IP（auto = 自動検出 / manual = 手入力）
 10000.0 kHz AM  VOL 70              ← 今の設定（操作は引き続き可能）
 ```
 
-- **原因は断定しません。** PC側プログラムが動いていない場合のほか、PCのIPの誤りやネットワーク障害でも同じ表示になります。最後の2行（エラー内容とIP）が切り分けの手掛かりです。`I`キーでPCのIPを入力・変更できます。
-- 区別: **Wi-Fi が切れているとき**はこの案内ではなく、従来の `Wi-Fi: …` 表示。**PCは応答しているがKiwiSDRだけが失敗**しているときも、この案内は出ず、従来の`Kiwi: …`表示（状態行）です。
+- **原因は断定しません。** PC側プログラム、USBケーブル、またはWi-Fi経路を確認します。Wi-Fi制御では`I`キーでPCのIPを入力・変更できます。
+- USB接続ではOUT PC／OUT ADVともWiFi灯が赤でも正常です。PC灯が緑なら操作と音声の経路は接続済みです。
 - 地球儀（`G`）を開いたときPCに繋がっていなければ、地球儀の右側にも同じ案内（短縮版）が出ます。
 
 ### 音声出力先（O キー、v1.3）
@@ -46,12 +47,12 @@ PC IP: 192.168.1.23 (auto)          ← 使っている PC の IP（auto = 自�
 | 出力先 | 動作 |
 |---|---|
 | **Mac Speaker**（初期設定） | 従来どおり。Mac が KiwiSDR の音声をデコードして Mac のスピーカーから再生 |
-| **Cardputer Speaker** | Mac が受信・デコードを続け、**デコード済みの音声を Wi-Fi で Cardputer に送り**、内蔵スピーカーで再生（Cardputer は RADIO DAYS 専用の Wi-Fi スピーカー） |
+| **Cardputer Speaker** | Mac が受信・デコードを続け、**デコード済みの音声をUSBまたはWi-FiでCardputerへ送り**、内蔵スピーカーで再生 |
 
 - 同時には鳴りません（切替時、片方を止めてからもう片方を始めます）。音量・ミュート（U135、`;` `.` `+` `-` `M`）はどちらでも同じ操作で、同じ設定値です。Cardputer 側の音量は Cardputer 本体で掛けるので、バッファの遅れなく即座に効きます。
 - 右上パネルに `OUT PC` / `OUT ADV`（ADV = Cardputer）。Cardputer 出力を選んで鳴り始めるまで、下部の黒緑液晶の状態行に `ADV audio: waiting for PC / connecting / buffering / reconnecting / no memory` と理由が出ます。**メモリが確保できないときは自動的にPCスピーカーのままにして**表示します。
 - Wi-Fi が切れると Cardputer が自動で再接続します（0.5→4 秒間隔）。復帰時は古い音声を捨てて遅延が溜まらないようにします。**Cardputer が落ちている間、Mac は自動では鳴りません**（突然 Mac が鳴らないよう、無音のまま状態行で知らせます）。Mac 側の Terminal に `Cardputer audio connected` / `lost` が出ます。
-- 通信: 音声は TCP 8767 番（Mac 側）、16bit モノラル PCM・約 12kHz（約 192kbps、Wi-Fi の負担は小さい）。Mac のファイアウォールの許可ダイアログが出たら許可してください（8765 と同じ Python）。
+- 通信: USB音声、またはTCP 8767番のWi-Fi音声を使います。形式は16bitモノラルPCM・約12kHzです。Wi-Fi利用時にMacのファイアウォール許可ダイアログが出たら許可してください。
 - 音量の曲線は Mac と同じ (音量/100)² で、Cardputer の最大は U10 と同じ 192/255 に抑えています（小さなスピーカーの歪み防止）。**音量感は実機で聴いて調整が必要**です。
 - `caffeinate`（Mac）: `Start RADIO DAYS Mac.command` は `caffeinate -i` 経由でプログラムを起動します。Windows 版では、プログラム自身が動作中だけスリープを防ぎます（終了すると解除）。プログラムが動いている間だけ Mac のアイドルスリープを防ぎ、終了すると（Ctrl+C・ウィンドウを閉じる・強制終了でも）自動的に解除されます。
 
@@ -130,7 +131,7 @@ RADIO DAYS SDR
 | `O` | **音声の出力先を切り替え**（Mac スピーカー ⇄ Cardputer スピーカー）。選んだ出力先は保存され、再起動後も復元 |
 | `D` | 診断画面（音切れの原因の切り分け。何かキーで戻る） |
 | `N` `P` | 次/前の KiwiSDR（従来どおり） |
-| `W` | Wi-Fi 設定 / `I` Mac の IP / `H` ヘルプ |
+| `W` | Wi-Fi再スキャン・設定（`S` 保存一覧、`DEL` 削除、`X` 一時OFF/ON） / `I` PCのIP / `H` ヘルプ |
 
 画面の **SIGNAL メーター**は KiwiSDR が報告した実際の受信強度（RSSI）です。
 音量表示は、Mac に反映されたかどうかに関わらず「設定値」です（反映が遅れている間は Status 行に Mac の状態が出ます）。
@@ -148,6 +149,7 @@ U10 の Location 画面の地球儀描画（正射図法・陸地データ・回
 | 押しながら回す | 音量（U10 と同じ） |
 
 - 右上の小さな**人工衛星**は第一世代の絵（飾り）です。衛星はふわふわ漂い、数秒おきに地球と電波をやり取りします（水色の波=地球から衛星へ、ランプの点滅、黄色の波=衛星から地球へ。1 方向ずつ）。これも飾りで、実際の通信状態とは連動しません。
+- 受信機一覧・位置・選局命令はPCとの制御通信で運びます。**USB接続だけで地球儀の地点表示・選局・OUT PC／OUT ADVの再生ができ、Cardputer側のWi-Fiは不要です。** PCがインターネット経由でKiwiSDRへ接続します。Wi-FiはUSBを使わない場合の代替経路です。
 - 黄色の点 = 登録受信機、**赤＋白の点 = 選択中**、**リング = 現在使用中**（緑=受信中、橙=接続中、赤=接続失敗）。
 - 右側に名前・緯度経度・状態（`ON AIR` / `CONNECTING...` / `FAILED: 理由` / `REQUESTING...`）と、現在の受信機の状態（`NOW: …`）を表示します。状態は Mac の実際の接続状態そのものです。
 - 同じ場所の受信機（Ironstone AU / AU2）は点が重なりますが、選択は別々にできます（右側に `1 of 2 at this site` と表示）。

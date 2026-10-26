@@ -18,7 +18,17 @@ Listen to shortwave through public [KiwiSDR](http://kiwisdr.com/) receivers arou
 **M5Stack Cardputer ADV** (plus the **U135 rotary encoder**) as the remote control and a **Mac or a Windows 11 PC** as the engine.
 Includes a browser-based **Receiver Manager** to choose, order and edit the receivers shown on the Cardputer's globe.
 
+The browser **Operation Guide is also a live PC control panel**. It mirrors the Cardputer display and controls the same
+Python radio engine, so RADIO DAYS SDR can be tried with a PC and browser before buying or connecting a Cardputer.
+When a Cardputer is connected, hardware and browser controls remain synchronized.
+
+**The Web interface does not replace the Cardputer.** It is another input and display for the same PC radio engine: useful
+for trying RADIO DAYS SDR, setup and secondary control. The intended experience is still physical—holding a tiny computer,
+turning its dial and hearing a distant station from that little device. That is the point. The Web interface is served by
+the Python program on a Mac or Windows PC; it is not a stand-alone hosted page and is not intended for phone-only use.
+
 > **Status: hobby project. The v1.10 GUI has been flashed to a real Cardputer ADV and its appearance and main controls were approved by the author on 2026-10-25. The final OS-neutral public build passed the full PC-side regression suite and was installed on the device through Launcher (Wi-Fi) on 2026-10-25, where the knob tuning, volume, MANUAL/AUTO, globe screen and a 30-minute OUT ADV playback were confirmed by the author (by ear, not measured).**
+> **SDR-1.28 uses TinyUSB for the Cardputer ADV cable link. Real-device testing confirmed USB control and OUT ADV operation with Cardputer Wi-Fi disabled. Wi-Fi can be temporarily disabled without erasing saved networks, and the Web Controller synchronizes G/D screens in both directions.**
 > **Windows 11 has been tried on one PC** (Windows 11, Python 3.12.10, with a real Cardputer ADV): start, Receiver Manager, Cardputer link, volume/mute/output switching and shutdown worked. Other Windows PCs and long runs are untested.
 > See [What is verified and what is not](#what-is-verified-and-what-is-not) before relying on anything. Linux is not supported or tested.
 
@@ -29,14 +39,14 @@ Includes a browser-based **Receiver Manager** to choose, order and edit the rece
 ## Who does what
 
 ```
-Cardputer ADV ──Wi-Fi: HTTP 8765 / UDP 8766 / audio TCP 8767──▶ Mac / Windows PC (radiodays_sdr.py) ──WebSocket──▶ KiwiSDR (internet)
+Cardputer ADV ──USB serial (control), or Wi-Fi (control + OUT ADV audio)──▶ Mac / Windows PC ──WebSocket──▶ KiwiSDR
  knob, keys, screen                                              decoding, volume, AUTO scan, sound out
-                                                                  Receiver Manager (browser, 127.0.0.1:8780)
+                                                                  Web radio / Receiver Manager (PC browser, 127.0.0.1:8780)
 ```
 
 | | Cardputer ADV | PC (Mac or Windows 11) |
 |---|---|---|
-| Role | Remote control and display: frequency, mode, volume, globe receiver chooser, status lamps. Optionally plays the sound on its own speaker (`O` key). | Does the real work: connects to the KiwiSDR, decodes audio, plays it (or streams it to the Cardputer), runs AUTO scan, keeps the receiver list `mac/servers.json`, serves the Receiver Manager page. |
+| Role | Remote control and display: frequency, mode, volume, globe receiver chooser, status lamps. Optionally plays the sound on its own speaker (`O` key). | Does the real work: connects to the KiwiSDR, decodes audio, plays it (or streams it to the Cardputer), runs AUTO scan, keeps the receiver list `mac/servers.json`, and serves the live Web radio and Receiver Manager. |
 | Software | `firmware/RadioDays_SDR/RadioDays_SDR.ino` (+ prebuilt `firmware/bin/`) | `mac/radiodays_sdr.py` (the folder is called `mac` for historical reasons; it is shared by both systems), started by the start file of your OS (below) |
 
 The white panel at the upper right has five rows: output, **WiFi / PC / Kiwi** link health, MANUAL/AUTO, AM/USB/LSB, and the 0.1 / 1 / 5 / 10 kHz tuning increment. The three link lamps use green/yellow/red; amber means selected in the other rows.
@@ -45,7 +55,7 @@ The white panel at the upper right has five rows: output, **WiFi / PC / Kiwi** l
 
 * **macOS** or **Windows 11**, with **Python 3.9 or newer** (Mac: `python3 --version`, `brew install python` if missing; Windows: install from <https://www.python.org/downloads/windows/> and tick **"Add python.exe to PATH"**) and an internet connection for the first start.
   The start file installs the rest (`numpy`, `soundcard` and its `cffi`; the KiwiClient library) into `mac/.venv` by itself. Nothing else is needed.
-* M5Stack **Cardputer ADV** (+ U135 encoder). The Cardputer and the computer must be on the **same LAN**; Wi-Fi with client isolation (guest networks) will not work.
+* M5Stack **Cardputer ADV** (+ U135 encoder). USB alone supports both **OUT PC** and **OUT ADV**, so Cardputer Wi-Fi is optional. When using Wi-Fi instead of USB, keep the Cardputer and PC on the same LAN; guest Wi-Fi with client isolation will not work.
 * To rebuild the firmware yourself: `arduino-cli`, the `m5stack:esp32` core 3.3.10, libraries M5Cardputer, M5Unified, M5GFX, ArduinoJson 7 (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 
 ## Which file do I double-click?
@@ -54,7 +64,7 @@ Download this repository (or `git clone` it) and keep the whole folder together.
 
 | | macOS | Windows 11 |
 |---|---|---|
-| **Listen** (starts the radio and opens the Receiver Manager in your browser) | `Start RADIO DAYS Mac.command` | `Start RADIO DAYS Win.bat` |
+| **Listen** (starts the radio and opens the Web Controller in your browser) | `Start RADIO DAYS Mac.command` | `Start RADIO DAYS Win.bat` |
 | Only edit the receiver list (the radio is **not** started) | `Open Receiver Manager Mac.command` | `Open Receiver Manager Win.bat` |
 
 Normal use: **double-click only the first row for your OS.** The second row is for editing the list without the radio; you never need both.
@@ -87,7 +97,7 @@ Windows is kept awake while the radio runs.
 **The Cardputer ADV cannot receive SDR broadcasts by itself.** Listening requires
 the RADIO DAYS SDR program (including the Receiver Manager) running on a Mac or
 Windows PC, an internet connection from that computer to a KiwiSDR receiver,
-and a network connection between the Cardputer and the computer.
+and either a USB connection or a LAN connection between the Cardputer and computer. USB alone supports controls, the globe receiver list, location selection, OUT PC and OUT ADV audio. Cardputer Wi-Fi is an optional alternate path.
 
 ### Install with M5Burner
 
@@ -109,18 +119,19 @@ esptool --chip esp32s3 --port /dev/cu.usbmodemXXXX write-flash 0x0 firmware/bin/
 ```
 
 If writing fails, hold the side button (G0) while powering on (download mode). **This replaces whatever firmware is on the device** (e.g. the internet-radio RADIO DAYS).
-To build from source instead: `firmware/build.sh` (needs the tools listed above). The `.ino` and the `.bin` files in this repository belong together (same source, version tag `SDR-1.10`).
+To build from source instead: `firmware/build.sh` (needs the tools listed above). The `.ino` and the `.bin` files in this repository belong together (same source, version tag `SDR-1.28`).
 
-First start: pick a Wi-Fi from the list (`;` `.` or knob, ENTER), type the password, ENTER. The PC is found automatically (UDP); if not, press `I` and type the IP address printed in the start file's window.
+**OUT PC and OUT ADV over USB:** start RADIO DAYS on the PC, connect USB, and then power on/start the Cardputer app. USB control and audio are detected automatically and no Cardputer Wi-Fi setup is needed. On the tested Cardputer ADV, unplugging and reinserting USB while the app remains running may not restore the cable link; if `CABLE ok` does not return, leave USB connected and restart/power-cycle the Cardputer. **Wi-Fi operation:** press `W` to rescan, choose a network, and enter its password. Credentials are saved only after a successful connection, for up to three networks. Press `S` in Wi-Fi setup to view saved networks and `DEL` to remove one. Press `X` to temporarily turn Wi-Fi OFF/ON without deleting any saved credentials. When USB is not used, keep the PC and Cardputer on the same LAN; automatic UDP discovery is used, with `I` available for manual PC IP entry.
+The clock is synchronized from the PC over USB as well as from NTP over Wi-Fi. The best known time is saved every ten minutes and restored offline; if the hardware RTC is available it is also updated. Without a working hardware RTC, time spent fully powered off cannot be measured, so the saved fallback resumes from its last checkpoint.
 **About the Cardputer display:** v1.10 puts low, wide SIGNAL/VOLUME analogue meters at upper left and a top-aligned five-row status panel at upper right, with a raised full-width tuning scale below. The five rows have equal height, pale-grey separators and M5Stack-inspired colour-coded labels; link lamps keep their green/amber/red status meaning. Instrument edges are only one pixel thick, with grey top/left inner shadows to look recessed. At the bottom, separate radio-information and digital-watch-style JST LCD modules use black/fluorescent-green glass and equal-height metal rails. Visible slotted screws sit outside the glass—four above and below the wide module, two above and below the clock. Both the tuned frequency and time use large, bold bitmap digits; `kHz` and the status line remain smaller ordinary text for clarity. Changing mode selects a recommended increment: AM=5 kHz, USB/LSB=1 kHz. The globe satellite still floats and talks with the Earth as in the first RADIO DAYS. Cardputer connection notices use the OS-neutral term `PC`.
 The five status rows have equal height and pale-grey separators. Both lower LCDs have equal-height silver rails above and below their glass.
-The Receiver Manager and the Operation Guide pages open in **English**; the **日本語 / EN** button switches the language, and the choice is remembered in that browser.
+The live Web radio opens in **English** for international use. The detailed guide retains its **日本語 / EN** switch and remembers the choice in that browser.
 
 Key reference: the **Operation Guide** ([English](docs/QUICK_GUIDE_EN.md) / [日本語](docs/QUICK_GUIDE_JA.md), also opened from the Receiver Manager page) and the detailed [docs/OPERATION_JA.md](docs/OPERATION_JA.md) (Japanese). The short version: knob = tune, knob+turn = volume, `G` globe, `Tab`/`T` MANUAL⇄AUTO, `O` sound output, `D` diagnostics, `H` help.
 
 ## Receiver Manager (choose and order the receivers)
 
-**The "Start RADIO DAYS" file (Mac: `Start RADIO DAYS Mac.command`, Windows: `Start RADIO DAYS Win.bat`) opens the Receiver Manager in your default browser every time it starts** (address: **<http://127.0.0.1:8780/>**; you can also type it yourself while the radio runs). Closing the browser tab does not stop the radio; if the browser cannot be opened, the window prints the address and the radio keeps running.
+**The "Start RADIO DAYS" file (Mac: `Start RADIO DAYS Mac.command`, Windows: `Start RADIO DAYS Win.bat`) opens the Web Controller in your default browser every time it starts** (address: **<http://127.0.0.1:8780/guide.html>**; you can also type it yourself while the radio runs). Closing the browser tab does not stop the radio; if the browser cannot be opened, the window prints the address and the radio keeps running.
 For normal listening you start **only the "Start RADIO DAYS" file**. The "Open Receiver Manager" file (`... Mac.command` / `... Win.bat`) is for editing the list **without starting the radio** (it also opens the browser each time); if a Receiver Manager is already running, it does not start a second one and opens the existing page instead.
 If port 8780 is used by another program, the window says so (with how to find it: `lsof` on Mac, `netstat` on Windows; or use `--manager-port` / `--port` with another number); it is only treated as RADIO DAYS' own Receiver Manager when the program on the port identifies itself as such.
 The page is served by the PC-side program, only to this computer (`127.0.0.1`), and reads/writes `mac/servers.json` through it.
@@ -136,7 +147,7 @@ The page is served by the PC-side program, only to this computer (`127.0.0.1`), 
   * **Bulk HTTP re-check** (only when you press "Re-check registered (HTTP)" or "Check shown candidates (HTTP)"): asks for confirmation with the number of receivers, runs at most 4 requests at a time with short gaps, can be stopped, and the program itself also never runs more than 4 HTTP checks at once. There is no bulk audio check.
   * Candidates are **never presented as working**: the list is a snapshot of the public directory (its date is shown on the page and stored in `mac/manager/receiver_candidates.json`). Proxy-hosted receivers (`*.proxy.kiwisdr.com`) are listed with port 8073, which is an assumption and is marked "port assumed".
   * Positions of candidates come from what each receiver reports about itself; please verify them. Receivers without a position are shown as "position unverified" and get no dot on the globe.
-* **Operation Guide**: the button at the top opens a quick reference (basic operation, receiver choice, MANUAL/AUTO, audio output, Receiver Manager, the five-row status panel and troubleshooting) in Japanese or English. Its single text source is `mac/manager/guide.json`; `docs/QUICK_GUIDE_*.md` are generated from it.
+* **Live Operation Guide / Web radio**: the button at the top opens the Cardputer-style live control panel. It mirrors the radio state, accepts keyboard, button and JOG input, includes the globe receiver chooser and works without a Cardputer while the Python radio engine is running. **Detailed Guide** opens the former bilingual reference; its text source remains `mac/manager/guide.json`, from which `docs/QUICK_GUIDE_*.md` are generated.
 * **Safety of saving**: input is validated first (host, port 1-65535, ASCII names ≤ 43 / 20 chars, latitude/longitude, no duplicates, 1-32 entries). The new file is written to a temporary file, flushed, read back and compared, and only then swapped in atomically. The previous good file is kept as `mac/servers.json.bak` and in `mac/.servers_backups/` (last 10). A damaged `servers.json` is kept as `servers.json.corrupt-<time>` and the program starts from the last good copy. **"Restore previous save"** swaps back. If the file was changed elsewhere after the page was opened, saving asks before overwriting.
 * **Security**: the page listens on `127.0.0.1` only; requests need the right `Host`, no foreign `Origin`, a custom header and a JSON body; passwords are never sent to the browser (it only learns "password set"). `servers.json` is saved with mode 600.
 
@@ -150,6 +161,7 @@ The page is served by the PC-side program, only to this computer (`127.0.0.1`), 
 ## Network notes
 
 * The PC-side program's API (TCP 8765), discovery (UDP 8766) and Cardputer-speaker audio (TCP 8767) listen on **all network interfaces** of the computer, protected only by a shared token (`RADIO_DAYS_LOCAL_2026` by default, compiled into the firmware and the `--token` option). That is meant for a trusted home LAN. It is **not** a secret and not suitable for an untrusted network. To change it, change `TOKEN` in the `.ino`, rebuild and flash, and start the PC-side program with `--token`.
+* USB control is automatically detected on Espressif/M5Stack serial devices and also carries OUT ADV audio. Use `--serial-port off` to disable it or `--serial-port COM4` / `--serial-port /dev/cu.usbmodem...` to select a port explicitly.
 * The Receiver Manager (TCP 8780) is loopback-only; `--manager-port 0` turns it off.
 * Many KiwiSDR owners refuse a second connection from the same IP address; do not run two copies against the same receiver.
 
@@ -163,6 +175,8 @@ Legend: **tested** = run and passed here; **real** = a real KiwiSDR/real hardwar
 | Mac program receiving from real KiwiSDR receivers, AUTO scan on real receivers | **tested, real** (on 2026-10-23/24; reception depends on time and receiver) |
 | Receiver Manager: store and validation, atomic save/backup/restore, corrupt-file fallback, HTTP security (host/origin/CSRF/size), conflict detection, status check wording, candidate-file schema | **tested**: 26 automated tests (14 for saving/security + 12 for the check history, bulk-check limit and recording) |
 | Receiver Manager page logic (reorder, validation, payload, filters, wording of results) | **tested**: 15 Node tests (also the date/time wording in Japanese and English and the bulk-run limit) |
+| Live Web radio: page/assets, synchronized state API and control actions | **tested**: 3 automated tests; browser display and receiver switching also checked manually (2026-10-26) |
+| Cardputer USB control protocol and shared USB/HTTP command handling | **real-device verified with SDR-1.28 on 2026-10-27**: TinyUSB enumerated on macOS, `CABLE ok` was confirmed, and operation continued with Cardputer Wi-Fi disabled. Hot replug may require a Cardputer restart. |
 | Receiver Manager page in a browser against a running program: select a candidate, reorder, save; `/servers` of the running program shows the new list; backup and file written | **tested** (manual run in a browser, 2026-10-24) |
 | Checks against the public directory's Japanese entries (2026-10-24, twice): HTTP check: 23 of 25 answered in each of the two runs (not necessarily the same 23); audio check run on one (Adachi) and audio blocks arrived | **real, a single snapshot**; says nothing about other times |
 | Check history stored and shown again after reloading the page; HTTP and audio kept apart; bulk HTTP check of the 25 Japanese entries from the page with at most 4 at a time; opening the page sends no check request; Operation Guide opens in a new tab in Japanese and English | **tested** (browser, 2026-10-24) |
@@ -180,7 +194,7 @@ Details: [docs/VERIFICATION.md](docs/VERIFICATION.md) (English summary) and [doc
 
 ```bash
 cd mac
-.venv/bin/python -m unittest discover -s tests -p "test_*.py"     # 105 tests; volume test needs the BlackHole 2ch device, otherwise it is skipped
+.venv/bin/python -m unittest discover -s tests -p "test_*.py"     # 111 tests; volume test needs the BlackHole 2ch device, otherwise it is skipped
 node tests/js/test_logic.js                                       # Receiver Manager page logic
 cd ../firmware/tools/host_render && M5GFX=/path/to/libraries/M5GFX ./run.sh   # screen drawing tests on a PC (g++ needed)
 cd ../host_tests && PYTHON=../../../mac/.venv/bin/python ./run.sh             # audio protocol / playout tests on a PC
@@ -198,8 +212,8 @@ mac/platform_support.py        the few OS-specific parts (LAN address, port shar
 mac/servers_store.py           validating, crash-safe reader/writer of servers.json
 mac/receiver_manager.py        Receiver Manager backend (loopback HTTP)
 mac/check_history.py           per-receiver check history (check_history.json)
-mac/manager/                   Receiver Manager page (index.html, app.js, style.css, receiver_candidates.json)
-                               and the Operation Guide (guide.html, guide.js, guide.json = the single source of the guide text)
+mac/manager/                   Receiver Manager and detailed Operation Guide
+mac/manager/radio/             live Cardputer-style Web radio, controls and display assets
 mac/servers.default.json       the starting list
 mac/tools/                     fetch_kiwiclient.py, build_candidates.py, kiwi_position.py, build_guide_docs.py
 mac/tests/                     automated tests (live_*.py use real receivers)

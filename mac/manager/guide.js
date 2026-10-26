@@ -2,8 +2,8 @@
  * generate docs/QUICK_GUIDE_*.md by mac/tools/build_guide_docs.py).  Plain DOM, no libraries, no network except /guide.json. */
 'use strict';
 (function () {
-  const UI = { ja: { back: '← Receiver Manager に戻る', detail: '詳しい説明: ', failed: '操作ガイドを読み込めませんでした。' },
-               en: { back: '← Back to Receiver Manager', detail: 'More detail: ', failed: 'Could not load the operation guide.' } };
+  const UI = { ja: { start: '最初にここから', detail: '詳しい説明: ', failed: '操作ガイドを読み込めませんでした。' },
+               en: { start: 'START HERE', detail: 'More detail: ', failed: 'Could not load the operation guide.' } };
   let lang = (function () { try { const l = localStorage.getItem('rdsdr-lang'); if (l === 'ja' || l === 'en') return l; } catch (e) { /* no storage */ } return 'en'; })();   // English unless the user chose Japanese (the choice is remembered)
   let guide = null;
   const $ = (id) => document.getElementById(id);
@@ -11,6 +11,7 @@
   const tx = (v) => (v && typeof v === 'object') ? (v[lang] || v.en || '') : (v || '');
 
   function renderBlock(b) {
+    if (b.type === 'p' && b.emphasis === 'start') { const d = el('div', 'start-here'); d.append(el('strong', '', UI[lang].start), el('p', '', tx(b.text))); return d; }
     if (b.type === 'p') return el('p', '', tx(b.text));
     if (b.type === 'h') return el('h3', '', tx(b.text));
     if (b.type === 'list') { const ul = el('ul'); b.items.forEach(i => ul.append(el('li', '', tx(i)))); return ul; }
@@ -34,7 +35,6 @@
 
   function render() {
     document.documentElement.lang = lang;
-    $('back').textContent = UI[lang].back;
     if (!guide) { $('content').textContent = UI[lang].failed; return; }
     document.title = 'RADIO DAYS SDR - ' + tx(guide.title);
     $('gtitle').textContent = tx(guide.title);
