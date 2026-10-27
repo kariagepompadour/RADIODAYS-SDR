@@ -699,7 +699,7 @@ OUT ADV で再生中、PC 側 Terminal に次の順で記録されました。
 
 ## 21. SDR-1.28: USB有線接続（2026-10-27）
 
-Mac 1台とCardputer ADV 1台で確認。アプリはLauncherから起動した。
+Mac 1台とCardputer ADV 1台で確認。アプリはLauncherから起動した。USB有線接続は、利用者がWindows 11 PC 1台でも確認した。
 
 | 項目 | 方法 | 結果 |
 |---|---|---|
@@ -708,6 +708,8 @@ Mac 1台とCardputer ADV 1台で確認。アプリはLauncherから起動した�
 | TinyUSB CDC（USB-OTG） | 最小プローブ `firmware/tools/usb_probe_tinyusb` | **実測**: 認識された（`SOF moving`、`mount 1`、`cdc 1`、`/dev/cu.usbmodem80456B76A1101`）。双方向の通信も成功 |
 | TinyUSB版ファームウェア | `SDR-1.26`の診断画面、`SDR-1.28`で`W`→`X` | **実測**: `CABLE ok`、`USB SOF+ m1 cdc1`。CardputerのWi-FiをOFFにしても、USBだけで操作とOUT ADV音声が続いた |
 | アプリ動作中のUSB抜き差し | 手動 | **実測**: 自動では戻らない。USBを挿したままCardputerを再起動／電源を入れ直すと`CABLE ok`に戻る（運用上の制限として文書化） |
-| PC側とファームウェアのロジック | `mac/tests`（117件）、`node mac/tests/js/test_logic.js`（15件）、`firmware/tools/host_tests`、`firmware/tools/host_render` | 全件合格（失敗0） |
+| Windows 11でのUSB制御（SDR-1.28と修正前のPC側プログラム） | 実機、利用者が実施 | **実測: 動作せず**。COM4は検出されるが通信が来ない（`USB link silent; reopening the port`）。COM3が候補になることもあった（`ClearCommError failed`）。原因: Windowsのpyserialでは`dsrdtr=True`がDTRハンドシェイクとDSRによる送信制御になり、DTRがCardputerに伝わらない。TinyUSB版ファームウェアはDTRが立っている間しか送信しない |
+| PC側の修正後のWindows 11でのUSB制御（コミット`471b5db`: WindowsではDTRオン・RTSオフで開く。問い合わせが来たポートを優先） | 実機、利用者が実施（修正版`radiodays_sdr.py`を上書き） | **実測: 2026年10月27日に動作**。USB制御が成立し、D診断画面に`CABLE ok`が表示された。SDR-1.28ファームウェアは変更していない |
+| PC側とファームウェアのロジック | `mac/tests`（123件。WindowsでのDTR/RTSの開き方とポート選択を偽のpyserialで確かめるテストを含む）、`node mac/tests/js/test_logic.js`（15件）、`firmware/tools/host_tests`、`firmware/tools/host_render` | 全件合格（失敗0） |
 
-SDR-1.28で**未検証**: **Windows**でのUSB制御（TinyUSBはホストがDTRを立てている間だけ送信する）、ケーブルを抜いた後の再接続処理がCardputerの画面操作をどの程度止めるか、USBホストがないときのWi-Fiのみの操作の遅れ、実機でのWeb Controllerの`X`ボタン、長時間動作。
+SDR-1.28で**未検証**: **Windows**でのCardputerのWi-Fi OFF時のUSBだけの操作とUSB経由のOUT ADV音声（Windowsで確認したのはUSB制御と`CABLE ok`のみ）、ケーブルを抜いた後の再接続処理がCardputerの画面操作をどの程度止めるか、USBホストがないときのWi-Fiのみの操作の遅れ、実機でのWeb Controllerの`X`ボタン、長時間動作。
