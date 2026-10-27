@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Windows batch files: cmd.exe needs CRLF (labels and goto are unreliable with LF). The repository keeps LF;
+# checkouts and GitHub ZIP downloads get CRLF.
+*.bat text eol=crlf
