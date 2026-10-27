@@ -54,6 +54,46 @@ install Python first and then double-click the start file again.
 
 *The picture is a PC-side rendering of the firmware's drawing code, not a photo of the device.*
 
+## 📻 How It All Started — A Little Radio, a Big World
+
+So, what are you actually using your Cardputer ADV for?
+Be honest: is it sleeping in a corner of your desk because you bought it and never quite found a use for it?
+Yeah… mine was too, until not long ago. 😅
+
+But I'd bought the thing, so I wanted to *make* something with it!
+So I started building all kinds of little projects.
+
+One of them was [a device with a tiny jog dial](https://github.com/kariagepompadour/Cardputer-ADV-Media-Jog).
+And while I was spinning that knob around, it suddenly took me back to the radio I listened to obsessively as a kid.
+
+"Wouldn't it be fun to bring that old radio back on this tiny gadget?"
+
+Right away, I sat down with an AI, wrote the code together, and released an internet radio called "[RADIO DAYS](https://github.com/kariagepompadour/RADIODAYS)."
+And people actually liked it, way more than I expected!
+Even better, one of the commenters told me about this fascinating thing called **SDR**:
+apparently you can tune real receivers all over the world through the internet and listen to actual radio broadcasts.
+
+…Come on, how was I supposed to ignore *that*? 😆
+
+That whole weekend disappeared into happy trial and error with the AI.
+By letting the PC handle the SDR receiving and processing, a tiny world radio, **RADIO DAYS SDR**, was finally born.
+
+Turn the dial in your palm and go hunting for a signal from somewhere out there in the world.
+Honestly? It's ridiculously fun!
+
+Once it was out, the response was bigger than I'd hoped, and I wanted even more people to give it a try.
+So I made it work on a PC alone, even if you don't have a Cardputer ADV.
+
+"Wait, then why would I need the ADV at all?"
+
+Oh, you're missing the point! 😄
+Turning a tiny dial, searching for a signal from a faraway country, and hearing it come out of that little speaker:
+*that's* the thrill! 📻🌍
+
+That's what this is: a little radio project born from a passing idea and a lot of curiosity.
+Want to come hunt for signals from around the world with me?
+I can already picture you next week, sending off reception reports and chasing QSL cards! 📮😆
+
 ## Who does what
 
 ```
