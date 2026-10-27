@@ -27,6 +27,24 @@ for trying RADIO DAYS SDR, setup and secondary control. The intended experience 
 turning its dial and hearing a distant station from that little device. That is the point. The Web interface is served by
 the Python program on a Mac or Windows PC; it is not a stand-alone hosted page and is not intended for phone-only use.
 
+## Before you start: a PC with Python is required
+
+RADIO DAYS SDR **does not work on the Cardputer ADV alone.** The radio itself is a Python program on your PC (Mac or Windows 11):
+it connects to the KiwiSDR, decodes the sound and serves the Receiver Manager and Web Controller. The Cardputer is its remote control
+and display. This is the same with **USB** and with **Wi-Fi**: Wi-Fi mode links the Cardputer to the PC program over your home network;
+it is not a stand-alone mode.
+
+The PC therefore needs **Python 3.9 or newer**, installed **before** the first start. The start files install everything else, but not Python itself.
+If you are installing Python now, take a current release such as **3.12 or 3.13** from python.org (tested: 3.12 on Windows 11, 3.15 on a Mac).
+
+| | Check whether Python is installed | If it is missing |
+|---|---|---|
+| Windows 11 | in Command Prompt: `py --version` (or `python --version`) | install it from <https://www.python.org/downloads/windows/> and tick **"Add python.exe to PATH"** in the installer |
+| macOS | in Terminal: `python3 --version` | install it from <https://www.python.org/downloads/macos/> (or `brew install python`) |
+
+If the command is not found, opens the Microsoft Store, offers to install the macOS developer tools, or shows a version older than 3.9,
+install Python first and then double-click the start file again.
+
 > **Status: hobby project. The v1.10 GUI has been flashed to a real Cardputer ADV and its appearance and main controls were approved by the author on 2026-10-25. The final OS-neutral public build passed the full PC-side regression suite and was installed on the device through Launcher (Wi-Fi) on 2026-10-25, where the knob tuning, volume, MANUAL/AUTO, globe screen and a 30-minute OUT ADV playback were confirmed by the author (by ear, not measured).**
 > **SDR-1.28 uses TinyUSB for the Cardputer ADV cable link. Real-device testing confirmed USB control and OUT ADV operation with Cardputer Wi-Fi disabled. Wi-Fi can be temporarily disabled without erasing saved networks, and the Web Controller synchronizes G/D screens in both directions.**
 > **Windows 11 has been tried on one PC** (Windows 11, Python 3.12.10, with a real Cardputer ADV): start, Receiver Manager, Cardputer link, volume/mute/output switching and shutdown worked. Other Windows PCs and long runs are untested.
@@ -53,7 +71,7 @@ The white panel at the upper right has five rows: output, **WiFi / PC / Kiwi** l
 
 ## Requirements
 
-* **macOS** or **Windows 11**, with **Python 3.9 or newer** (Mac: `python3 --version`, `brew install python` if missing; Windows: install from <https://www.python.org/downloads/windows/> and tick **"Add python.exe to PATH"**) and an internet connection for the first start.
+* **A PC: macOS** or **Windows 11**, with **Python 3.9 or newer** (how to check and install: [Before you start](#before-you-start-a-pc-with-python-is-required)) and an internet connection for the first start. The PC program is needed with both USB and Wi-Fi.
   The start file installs the rest (`numpy`, `soundcard` and its `cffi`; the KiwiClient library) into `mac/.venv` by itself. Nothing else is needed.
 * M5Stack **Cardputer ADV** (+ U135 encoder). USB alone supports both **OUT PC** and **OUT ADV**, so Cardputer Wi-Fi is optional. When using Wi-Fi instead of USB, keep the Cardputer and PC on the same LAN; guest Wi-Fi with client isolation will not work.
 * To rebuild the firmware yourself: `arduino-cli`, the `m5stack:esp32` core 3.3.10, libraries M5Cardputer, M5Unified, M5GFX, ArduinoJson 7 (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).

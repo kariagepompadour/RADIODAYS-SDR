@@ -27,6 +27,24 @@ Cardputerを接続した場合は、実機とブラウザの操作・表示が�
 その小さな筐体から遠くの放送が聞こえてくることです。そこに、この作品の意味があります。Web画面はMacまたはWindows PC上の
 Pythonプログラムが提供するもので、単独公開されたWebページではなく、スマートフォンだけで使うものでもありません。
 
+## はじめに: PCとPythonが必要です
+
+RADIO DAYS SDRは**Cardputer ADV単体では動作しません。** ラジオ本体はPC（MacまたはWindows 11）で動くPythonプログラムで、
+KiwiSDRへの接続、音声の復調、Receiver ManagerとWeb Controllerの提供を受け持ちます。Cardputerはそのリモコン兼表示器です。
+これは**USB接続でもWi-Fi接続でも同じ**です。Wi-FiモードはCardputerと家庭内ネットワーク経由でPCのプログラムをつなぐ方式で、
+Cardputer単体で動くモードではありません。
+
+そのため、PCには**Python 3.9以上**が必要です。初回起動の**前に**インストールしてください。起動ファイルはそれ以外のものを自動で導入しますが、Python本体は導入しません。
+これから入れる場合は、python.org から **3.12 や 3.13** などの現行版を選んでください（動作確認済み: Windows 11 で 3.12、Mac で 3.15）。
+
+| | Pythonが入っているかの確認 | 入っていない場合 |
+|---|---|---|
+| Windows 11 | コマンドプロンプトで `py --version`（または `python --version`） | <https://www.python.org/downloads/windows/> から導入し、インストーラーで **「Add python.exe to PATH」にチェック** |
+| macOS | ターミナルで `python3 --version` | <https://www.python.org/downloads/macos/> から導入（または `brew install python`） |
+
+コマンドが見つからない、Microsoft Storeが開く、macOSの開発者ツールのインストールを求められる、または3.9より古い版が表示される場合は、
+先にPythonをインストールしてから、起動ファイルをもう一度ダブルクリックしてください。
+
 > **状態: 個人の趣味のプロジェクトです。v1.10 GUIはCardputer ADV実機へ書き込み、2026年10月25日に見た目と主要操作を作者が確認・承認しました。OS共通表記にした最終版はPC上の全回帰テストに合格し、同日にLauncher（Wi-Fi）でCardputerへ導入して、ノブ選局、音量、MANUAL/AUTO、地球儀、OUT ADVでの30分再生を作者が確認しました（聴感での確認で、測定はしていません）。**
 > **SDR-1.28ではCardputer ADVとの有線接続にTinyUSBを使用します。実機試験で、CardputerのWi-FiをOFFにした状態でもUSB制御とOUT ADVが動作することを確認しました。保存設定を消さずWi-Fiを一時停止でき、G/D画面の双方向同期にも対応します。**
 > **Windows 11 は 1 台の PC で試しました**（Windows 11、Python 3.12.10、Cardputer ADV 実機）。起動、Receiver Manager、Cardputer との接続、音量・ミュート・出力先の切替、終了は動作しました。他の Windows PC や長時間の使用は未検証です。
@@ -53,7 +71,7 @@ Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の
 
 ## 必要なもの
 
-* **macOS** または **Windows 11**、**Python 3.9 以上**（Mac: `python3 --version` で確認、無ければ `brew install python`。Windows: <https://www.python.org/downloads/windows/> から導入し、**「Add python.exe to PATH」にチェック**）、初回起動時のインターネット接続。
+* **PC: macOS** または **Windows 11**、**Python 3.9 以上**（確認と導入の方法は上の「[はじめに: PCとPythonが必要です](#はじめに-pcとpythonが必要です)」）、初回起動時のインターネット接続。PCのプログラムはUSB接続でもWi-Fi接続でも必要です。
   残り（`numpy`、`soundcard`（と `cffi`）、KiwiClient ライブラリ）は、起動ファイルが `mac/.venv` に自動で導入します。他に必要なものはありません。
 * M5Stack **Cardputer ADV**（＋ U135）。USBだけで**OUT PC／OUT ADVの両方**を利用でき、CardputerのWi-Fiは任意です。USBを使わずWi-Fi接続する場合はCardputerとPCを同じLANへ接続します（端末間通信を禁止するゲストWi-Fiは不可）。
 * ファームウェアを自分でビルドする場合: `arduino-cli`、コア `m5stack:esp32` 3.3.10、ライブラリ M5Cardputer / M5Unified / M5GFX / ArduinoJson 7（[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 参照）。
