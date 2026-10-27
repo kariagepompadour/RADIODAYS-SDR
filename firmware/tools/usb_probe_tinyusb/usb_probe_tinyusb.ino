@@ -12,8 +12,9 @@
     mnt/umnt/susp  mount, unmount and suspend events since setup()
     rx     bytes received; every received line is echoed back as "ECHO <line>"
     rtc    RTC_CNTL_USB_CONF_REG (non-zero is expected here: TinyUSB routes the PHY to USB-OTG)
-  Note: the PHY routing survives a restart. The radio firmware (v1.25+) switches it back to Hardware CDC at boot;
-  tools/usb_probe (HWCDC) does not, so power-cycle the Cardputer before running that probe after this one.
+  Note: the PHY routing survives a restart. SDR-1.25 (the last Hardware CDC firmware) switched it back at boot;
+  SDR-1.26+ use USB-OTG themselves. tools/usb_probe (HWCDC) does not switch it back, so power-cycle the Cardputer
+  before running that probe after this one.
 */
 #include <M5GFX.h>
 #include <USB.h>

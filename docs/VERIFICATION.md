@@ -45,7 +45,7 @@ The full, dated log (in Japanese) is [VERIFICATION_JA.md](VERIFICATION_JA.md). T
 
 ## SDR-1.28: USB cable link (2026-10-27)
 
-Checked on one Mac and one Cardputer ADV, with the app started from Launcher.
+Checked on one Mac and one Cardputer ADV, with the app started from Launcher; the USB cable link was also checked by the user on one Windows 11 PC.
 
 | What | How | Result |
 |---|---|---|
@@ -54,9 +54,12 @@ Checked on one Mac and one Cardputer ADV, with the app started from Launcher.
 | TinyUSB CDC (USB-OTG) | minimal probe app `firmware/tools/usb_probe_tinyusb` | enumerated (`SOF moving`, `mount 1`, `cdc 1`, `/dev/cu.usbmodem80456B76A1101`); data passed both ways |
 | Firmware on TinyUSB | `SDR-1.26` diagnostics; `SDR-1.28` with `W` then `X` | `CABLE ok`, `USB SOF+ m1 cdc1`; with Cardputer Wi-Fi OFF, control and OUT ADV audio kept working over USB alone |
 | Unplugging and reinserting USB while the app runs | manual | **does not recover by itself**; restarting or power-cycling the Cardputer with USB connected restores `CABLE ok` (documented as an operating limitation) |
-| PC-side and firmware logic tests | `mac/tests` (117 tests), `node mac/tests/js/test_logic.js` (15), `firmware/tools/host_tests`, `firmware/tools/host_render` | all passed (0 failures) |
+| Windows 11 USB control, SDR-1.28 with the original PC program | real device, run by the user | **did not work**: COM4 was found, but the link stayed silent (`USB link silent; reopening the port`); COM3 was sometimes tried too (`ClearCommError failed`). Cause: on Windows, pyserial's `dsrdtr=True` means DTR handshake plus DSR flow control, so DTR never reached the Cardputer, and the TinyUSB firmware only sends while DTR is set |
+| Windows 11 USB control after the PC-side fix (commit `471b5db`: DTR on and RTS off at open on Windows; the port that carries requests is preferred) | real device, run by the user (the fixed `radiodays_sdr.py` copied over the installed one) | **worked on 2026-10-27**: USB control was established and the D screen showed `CABLE ok`. The SDR-1.28 firmware was not changed |
+| Windows 11, USB only (same fix) | real device, run by the user: `W` then `X` on the Cardputer to turn its Wi-Fi OFF, then tuning, then `O` to `OUT ADV` | **worked on 2026-10-27**: with Cardputer Wi-Fi OFF, tuning and frequency changes worked over USB alone, and `OUT ADV` played the sound on the Cardputer's speaker |
+| PC-side and firmware logic tests | `mac/tests` (123 tests, including the fake-pyserial tests of the Windows DTR/RTS open and port choice), `node mac/tests/js/test_logic.js` (15), `firmware/tools/host_tests`, `firmware/tools/host_render` | all passed (0 failures) |
 
-Not verified for SDR-1.28: USB control on **Windows** (TinyUSB sends only while the host holds DTR), how much the replug-recovery attempts stall the Cardputer UI after the cable is removed, Wi-Fi-only control latency while no USB host is attached, the Web Controller `X` button on the device, and long runs.
+Not verified for SDR-1.28: how much the replug-recovery attempts stall the Cardputer UI after the cable is removed, Wi-Fi-only control latency while no USB host is attached, the Web Controller `X` button on the device, and long runs.
 
 ## Files
 

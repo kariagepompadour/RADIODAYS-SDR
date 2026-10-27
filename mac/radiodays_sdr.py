@@ -1020,14 +1020,55 @@ def make_handler(engine, token):
     return Handler
 
 
+def open_cardputer_port(serial_module, device, windows):
+    """Open the Cardputer's USB CDC port so that DTR is up and RTS is down, without a reset sequence.
+
+    The TinyUSB firmware writes its requests only while the host holds DTR (USBCDC::write needs tud_cdc_n_connected),
+    and the ESP32 core restarts into the bootloader only after the sequence RTS-only, DTR+RTS, DTR-only, none.
+    """
+    if windows:
+        # On Windows pyserial maps dsrdtr=True to DTR_CONTROL_HANDSHAKE plus DSR output flow control
+        # (serialwin32._reconfigure_port). With usbser.sys DTR then never reached the Cardputer, so it never
+        # sent a request ("USB link silent"). Put DTR on and RTS off in the port settings applied at open
+        # (no edge), and set them again explicitly once the port is open.
+        port = serial_module.Serial(port=None, baudrate=115200, timeout=0.25, write_timeout=1, dsrdtr=False)
+        port.dtr = True
+        port.rts = False
+    else:
+        # Open without toggling the modem-control lines: with dsrdtr=True pyserial issues no DTR ioctl at open,
+        # and RTS stays low. macOS raises DTR when the port opens (SDR-1.28 diagnostics: cdc1).
+        port = serial_module.Serial(port=None, baudrate=115200, timeout=0.25, write_timeout=1, dsrdtr=True)
+        port.rts = False
+    port.port = device
+    port.open()
+    if windows:
+        port.dtr = True
+        port.rts = False
+    return port
+
+
 class SerialController:
-    """Cardputer USB control/state/audio link with automatic unplug/replug recovery."""
-    def __init__(self, engine, token, requested='auto'):
+    """Cardputer USB control/state/audio link with automatic unplug/replug recovery.
+
+    The TinyUSB firmware and the ESP32-S3 ROM download mode both enumerate as 303A:1001, and on Windows pyserial
+    reports no product name, so the identity of a port is proven by traffic: the port that last carried a valid
+    RDSDR_REQ is always tried first, and a port that opened but never sent one is left alone for a while when
+    other candidates exist, instead of alternating between them every few seconds.
+    """
+    SILENT_S = 4.0           # no line for this long: close the port and look again
+    QUIET_BACKOFF_S = 20.0   # a port that never answered (or could not be opened) waits this long if others exist
+    RESCAN_S = 2.0
+
+    def __init__(self, engine, token, requested='auto', windows=None):
         self.engine, self.token, self.requested = engine, token, requested
+        self.windows = platform_support.IS_WINDOWS if windows is None else windows
         self.stop_ev = threading.Event()
         self.thread = None
         self.port = None
         self.active = False
+        self.proven = None        # the port that last carried a valid request
+        self.quiet_until = {}     # port -> time.monotonic() before which it is skipped while others exist
+        self.reported = {}        # port -> the last problem printed for it (each new problem is printed once)
 
     @staticmethod
     def _candidates(requested):
@@ -1043,6 +1084,20 @@ class SerialController:
             if p.vid == 0x303A or any(word in text for word in ('espressif', 'm5stack', 'cardputer')):
                 result.append(p.device)
         return result
+
+    def ordered(self, devices, now):
+        """The ports to try now: the proven one first; ports that never answered wait while another one exists."""
+        devices = list(dict.fromkeys(devices))
+        if len(devices) > 1:
+            ready = [d for d in devices if d == self.proven or self.quiet_until.get(d, 0.0) <= now]
+            # all of them are waiting: try the one whose wait ends first, so a restarted Cardputer is never ignored
+            devices = ready or [min(devices, key=lambda d: self.quiet_until.get(d, 0.0))]
+        return sorted(devices, key=lambda d: d != self.proven)
+
+    def _report(self, device, text):
+        if self.reported.get(device) != text:
+            self.reported[device] = text
+            print(text)
 
     def start(self):
         if self.requested == 'off':
@@ -1063,70 +1118,79 @@ class SerialController:
     def _run(self):
         import serial
         while not self.stop_ev.is_set():
-            connected = False
-            for device in self._candidates(self.requested):
+            for device in self.ordered(self._candidates(self.requested), time.monotonic()):
                 if self.stop_ev.is_set():
                     break
-                try:
-                    # Open without toggling the modem-control lines: with
-                    # dsrdtr=True pyserial issues no DTR ioctl at open, and RTS
-                    # stays low, so the host never sends an ESP32 auto-reset
-                    # sequence. The OS still raises DTR when the port opens
-                    # (macOS, SDR-1.28 diagnostics: cdc1); the TinyUSB firmware
-                    # writes its requests only while DTR is up.
-                    port = serial.Serial(port=None, baudrate=115200, timeout=0.25,
-                                         write_timeout=1, dsrdtr=True)
-                    port.rts = False
-                    port.port = device
-                    port.open()
-                    with port:
-                        self.port, connected = device, True
-                        print('Cardputer USB control: %s' % device)
-                        port.reset_input_buffer()
-                        last_rx = time.monotonic()
-                        while not self.stop_ev.is_set():
-                            raw = port.readline()
-                            if not raw:
-                                # On macOS an unplugged CDC port can return
-                                # empty reads forever instead of raising. Close
-                                # that stale handle so the outer loop can find
-                                # the re-enumerated Cardputer after replugging.
-                                if time.monotonic() - last_rx > 4.0:
-                                    raise serial.SerialException('USB link silent; reopening the port')
-                                continue
-                            last_rx = time.monotonic()
-                            line = raw.decode('utf-8', 'replace').strip()
-                            response = self.handle_line(line)
-                            if response is None:
-                                continue
-                            # A live /state reply is larger than 1 KB. Pace control
-                            # replies in small chunks so the firmware's CDC receive
-                            # queue (4 KB, Serial.setRxBufferSize) drains while the
-                            # reply is arriving.
-                            payload = (response + '\n').encode()
-                            if ' /usb-audio' in line:
-                                # Audio must arrive faster than 12k samples/s; pacing
-                                # it like a state reply causes rhythmic under-runs
-                                # and beeps, so it goes out in one write.
-                                port.write(payload)
-                                port.flush()
-                            else:
-                                for offset in range(0, len(payload), 96):
-                                    port.write(payload[offset:offset + 96])
-                                    port.flush()
-                                    time.sleep(0.004)
-                            if not self.active:
-                                self.active = True
-                                print('Cardputer USB link active: controls and state are synchronized')
-                except (OSError, serial.SerialException) as e:
-                    if connected:
-                        print('Cardputer USB control disconnected: %s' % e)
-                finally:
-                    self.port = None
-                    self.active = False
-                if self.requested != 'auto':
-                    break
-            self.stop_ev.wait(2.0)
+                if self.serve(serial, device):
+                    break                 # it was the Cardputer: rescan so that it is tried first again
+            self.stop_ev.wait(self.RESCAN_S)
+
+    def serve(self, serial_module, device):
+        """Open one port and answer its requests until it fails or falls silent. Returns True if it answered."""
+        failure = (OSError, ValueError, serial_module.SerialException)
+        try:
+            port = open_cardputer_port(serial_module, device, self.windows)
+        except failure as e:
+            # e.g. PermissionError: another program has the port, or Windows still lists a device that is gone
+            self.quiet_until[device] = time.monotonic() + self.QUIET_BACKOFF_S
+            self._report(device, 'Cardputer USB: cannot open %s (%s)' % (device, e))
+            return False
+        answered, error = False, None
+        self.port = device
+        try:
+            port.reset_input_buffer()
+            last_rx = time.monotonic()
+            while not self.stop_ev.is_set():
+                raw = port.readline()
+                if not raw:
+                    # On macOS an unplugged CDC port can return empty reads forever instead of raising, and the
+                    # firmware sends a request at least every 1.5 s while the host holds DTR: close a silent handle.
+                    if time.monotonic() - last_rx > self.SILENT_S:
+                        break
+                    continue
+                last_rx = time.monotonic()
+                line = raw.decode('utf-8', 'replace').strip()
+                response = self.handle_line(line)
+                if response is None:
+                    continue
+                if not answered:
+                    answered = True
+                    self.proven, self.active = device, True
+                    self.quiet_until.pop(device, None)
+                    self.reported.pop(device, None)
+                    print('Cardputer USB link active on %s: controls and state are synchronized' % device)
+                # A live /state reply is larger than 1 KB. Pace control
+                # replies in small chunks so the firmware's CDC receive
+                # queue (4 KB, Serial.setRxBufferSize) drains while the
+                # reply is arriving.
+                payload = (response + '\n').encode()
+                if ' /usb-audio' in line:
+                    # Audio must arrive faster than 12k samples/s; pacing
+                    # it like a state reply causes rhythmic under-runs
+                    # and beeps, so it goes out in one write.
+                    port.write(payload)
+                    port.flush()
+                else:
+                    for offset in range(0, len(payload), 96):
+                        port.write(payload[offset:offset + 96])
+                        port.flush()
+                        time.sleep(0.004)
+        except failure as e:
+            error = e             # e.g. "ClearCommError failed": the device went away while the port was open
+        finally:
+            try:
+                port.close()
+            except failure:
+                pass
+            self.port = None
+            self.active = False
+        if answered:
+            print('Cardputer USB control disconnected from %s: %s' % (device, error or 'no data for %.0f s' % self.SILENT_S))
+        else:
+            self.quiet_until[device] = time.monotonic() + self.QUIET_BACKOFF_S
+            self._report(device, 'Cardputer USB: no RADIO DAYS request on %s%s (is the Cardputer app running?)'
+                         % (device, ' (%s)' % error if error else ''))
+        return answered
 
     def handle_line(self, line):
         """Return one protocol response, or None for unrelated serial log output."""

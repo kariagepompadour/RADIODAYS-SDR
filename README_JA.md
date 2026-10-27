@@ -27,6 +27,24 @@ Cardputerを接続した場合は、実機とブラウザの操作・表示が�
 その小さな筐体から遠くの放送が聞こえてくることです。そこに、この作品の意味があります。Web画面はMacまたはWindows PC上の
 Pythonプログラムが提供するもので、単独公開されたWebページではなく、スマートフォンだけで使うものでもありません。
 
+## はじめに: PCとPythonが必要です
+
+RADIO DAYS SDRは**Cardputer ADV単体では動作しません。** ラジオ本体はPC（MacまたはWindows 11）で動くPythonプログラムで、
+KiwiSDRへの接続、音声の復調、Receiver ManagerとWeb Controllerの提供を受け持ちます。Cardputerはそのリモコン兼表示器です。
+これは**USB接続でもWi-Fi接続でも同じ**です。Wi-FiモードはCardputerと家庭内ネットワーク経由でPCのプログラムをつなぐ方式で、
+Cardputer単体で動くモードではありません。
+
+そのため、PCには**Python 3.9以上**が必要です。初回起動の**前に**インストールしてください。起動ファイルはそれ以外のものを自動で導入しますが、Python本体は導入しません。
+これから入れる場合は、python.org から **3.12 や 3.13** などの現行版を選んでください（動作確認済み: Windows 11 で 3.12、Mac で 3.15）。
+
+| | Pythonが入っているかの確認 | 入っていない場合 |
+|---|---|---|
+| Windows 11 | コマンドプロンプトで `py --version`（または `python --version`） | <https://www.python.org/downloads/windows/> から導入し、インストーラーで **「Add python.exe to PATH」にチェック** |
+| macOS | ターミナルで `python3 --version` | <https://www.python.org/downloads/macos/> から導入（または `brew install python`） |
+
+コマンドが見つからない、Microsoft Storeが開く、macOSの開発者ツールのインストールを求められる、または3.9より古い版が表示される場合は、
+先にPythonをインストールしてから、起動ファイルをもう一度ダブルクリックしてください。
+
 > **状態: 個人の趣味のプロジェクトです。v1.10 GUIはCardputer ADV実機へ書き込み、2026年10月25日に見た目と主要操作を作者が確認・承認しました。OS共通表記にした最終版はPC上の全回帰テストに合格し、同日にLauncher（Wi-Fi）でCardputerへ導入して、ノブ選局、音量、MANUAL/AUTO、地球儀、OUT ADVでの30分再生を作者が確認しました（聴感での確認で、測定はしていません）。**
 > **SDR-1.28ではCardputer ADVとの有線接続にTinyUSBを使用します。実機試験で、CardputerのWi-FiをOFFにした状態でもUSB制御とOUT ADVが動作することを確認しました。保存設定を消さずWi-Fiを一時停止でき、G/D画面の双方向同期にも対応します。**
 > **Windows 11 は 1 台の PC で試しました**（Windows 11、Python 3.12.10、Cardputer ADV 実機）。起動、Receiver Manager、Cardputer との接続、音量・ミュート・出力先の切替、終了は動作しました。他の Windows PC や長時間の使用は未検証です。
@@ -53,7 +71,7 @@ Cardputer画面右上の白いパネルは、出力先、**WiFi / PC / Kiwi**の
 
 ## 必要なもの
 
-* **macOS** または **Windows 11**、**Python 3.9 以上**（Mac: `python3 --version` で確認、無ければ `brew install python`。Windows: <https://www.python.org/downloads/windows/> から導入し、**「Add python.exe to PATH」にチェック**）、初回起動時のインターネット接続。
+* **PC: macOS** または **Windows 11**、**Python 3.9 以上**（確認と導入の方法は上の「[はじめに: PCとPythonが必要です](#はじめに-pcとpythonが必要です)」）、初回起動時のインターネット接続。PCのプログラムはUSB接続でもWi-Fi接続でも必要です。
   残り（`numpy`、`soundcard`（と `cffi`）、KiwiClient ライブラリ）は、起動ファイルが `mac/.venv` に自動で導入します。他に必要なものはありません。
 * M5Stack **Cardputer ADV**（＋ U135）。USBだけで**OUT PC／OUT ADVの両方**を利用でき、CardputerのWi-Fiは任意です。USBを使わずWi-Fi接続する場合はCardputerとPCを同じLANへ接続します（端末間通信を禁止するゲストWi-Fiは不可）。
 * ファームウェアを自分でビルドする場合: `arduino-cli`、コア `m5stack:esp32` 3.3.10、ライブラリ M5Cardputer / M5Unified / M5GFX / ArduinoJson 7（[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 参照）。
@@ -176,7 +194,7 @@ esptool --chip esp32s3 --port /dev/cu.usbmodemXXXX write-flash 0x0 firmware/bin/
 | Receiver Manager: 保存と検証、原子的な保存・バックアップ・復元、壊れたファイルへの退避、HTTP のセキュリティ（Host/Origin/CSRF/サイズ）、競合検出、確認結果の文言、候補ファイルの形式 | **テスト済み**（自動テスト 26 件: 保存・セキュリティ 14 件 + 確認履歴・一括確認の上限・記録 12 件） |
 | Receiver Manager 画面のロジック（並べ替え、検証、送信内容、フィルタ、結果の文言） | **テスト済み**（Node テスト 15 件。日時の日本語/英語表記と一括実行の同時数の上限も含む） |
 | ライブ Web ラジオ: ページと画像、同期状態 API、操作命令 | **テスト済み**（自動テスト 3 件。ブラウザ表示と受信機切替も 2026-10-26 に手動確認） |
-| Cardputer USB制御プロトコルとUSB/HTTP共通の操作処理 | **2026年10月27日にSDR-1.28で実機確認済み**: macOS上でTinyUSBとして認識され、`CABLE ok` を確認し、CardputerのWi-FiをOFFにした状態でも動作を継続しました。動作中のUSB抜き差し後はCardputerの再起動が必要な場合があります。 |
+| Cardputer USB制御プロトコルとUSB/HTTP共通の操作処理 | **2026年10月27日にSDR-1.28で実機確認済み**: macOS上でTinyUSBとして認識され、`CABLE ok` を確認し、CardputerのWi-FiをOFFにした状態でも動作を継続しました。Windows 11でも、PC側の修正（ポートを開くときにDTRを立てる）後に、`CABLE ok`、CardputerのWi-FiをOFFにした状態での選局、USBだけでの `OUT ADV` 音声を確認しました。動作中のUSB抜き差し後はCardputerの再起動が必要な場合があります。 |
 | 動作中のプログラムに対するブラウザ画面の通し試験: 候補の選択、並べ替え、保存、動作中プログラムの `/servers` に新しい一覧が出ること、バックアップとファイルの書き出し | **テスト済み**（ブラウザでの手動操作、2026-10-24） |
 | 公開一覧の日本の候補への確認（2026-10-24、2 回）: HTTP 確認は 2 回とも 25 台中 23 台が応答（同じ 23 台とは限りません）。1 台（Adachi）で音声確認を実行し音声ブロックが届いた | **実機の KiwiSDR・ある時点の分**。他の時間については何も言えません |
 | 確認履歴がページの再読み込み後も表示される／HTTP と音声が別々に記録される／日本の候補 25 台の一括 HTTP 確認が同時 4 件以内で動く／画面を開いただけでは確認リクエストが出ない／操作ガイドが別タブで日本語・英語で開く | **テスト済み**（ブラウザ、2026-10-24） |
