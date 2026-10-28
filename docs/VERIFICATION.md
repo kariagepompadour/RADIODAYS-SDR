@@ -53,13 +53,50 @@ Checked on one Mac and one Cardputer ADV, with the app started from Launcher; th
 | Hardware CDC (USB Serial/JTAG), the original USB mode | minimal probe app `firmware/tools/usb_probe` (no M5Unified, no Wi-Fi) | **never enumerated**: no USB frames from the host (`SOF STOPPED`, 0 bus resets) although the pad and D+ pull-up were enabled. Leftover USB-OTG routing from Launcher was ruled out (the PHY register read 0 at boot) |
 | TinyUSB CDC (USB-OTG) | minimal probe app `firmware/tools/usb_probe_tinyusb` | enumerated (`SOF moving`, `mount 1`, `cdc 1`, `/dev/cu.usbmodem80456B76A1101`); data passed both ways |
 | Firmware on TinyUSB | `SDR-1.26` diagnostics; `SDR-1.28` with `W` then `X` | `CABLE ok`, `USB SOF+ m1 cdc1`; with Cardputer Wi-Fi OFF, control and OUT ADV audio kept working over USB alone |
-| Unplugging and reinserting USB while the app runs | manual | **does not recover by itself**; restarting or power-cycling the Cardputer with USB connected restores `CABLE ok` (documented as an operating limitation) |
+| Unplugging and reinserting USB while the app runs | manual | **did not always recover by itself** (number of tries and of automatic recoveries not recorded); when it did not, restarting or power-cycling the Cardputer with USB connected restores `CABLE ok` (documented as an operating limitation) |
 | Windows 11 USB control, SDR-1.28 with the original PC program | real device, run by the user | **did not work**: COM4 was found, but the link stayed silent (`USB link silent; reopening the port`); COM3 was sometimes tried too (`ClearCommError failed`). Cause: on Windows, pyserial's `dsrdtr=True` means DTR handshake plus DSR flow control, so DTR never reached the Cardputer, and the TinyUSB firmware only sends while DTR is set |
 | Windows 11 USB control after the PC-side fix (commit `471b5db`: DTR on and RTS off at open on Windows; the port that carries requests is preferred) | real device, run by the user (the fixed `radiodays_sdr.py` copied over the installed one) | **worked on 2026-10-27**: USB control was established and the D screen showed `CABLE ok`. The SDR-1.28 firmware was not changed |
 | Windows 11, USB only (same fix) | real device, run by the user: `W` then `X` on the Cardputer to turn its Wi-Fi OFF, then tuning, then `O` to `OUT ADV` | **worked on 2026-10-27**: with Cardputer Wi-Fi OFF, tuning and frequency changes worked over USB alone, and `OUT ADV` played the sound on the Cardputer's speaker |
 | PC-side and firmware logic tests | `mac/tests` (123 tests, including the fake-pyserial tests of the Windows DTR/RTS open and port choice), `node mac/tests/js/test_logic.js` (15), `firmware/tools/host_tests`, `firmware/tools/host_render` | all passed (0 failures) |
 
-Not verified for SDR-1.28: how much the replug-recovery attempts stall the Cardputer UI after the cable is removed, Wi-Fi-only control latency while no USB host is attached, the Web Controller `X` button on the device, and long runs.
+Not verified for SDR-1.28 (as of 2026-10-27): how much the replug-recovery attempts stall the Cardputer UI after the cable is removed, Wi-Fi-only control latency while no USB host is attached, the Web Controller `X` button on the device, and long runs.
+
+On one Windows 11 PC, the UI stall, the Wi-Fi-only control, the `X` button and an 85-minute run are covered in the next section.
+
+## SDR-1.28: additional real-device checks on Windows 11 (2026-10-28 to 29)
+
+One Windows 11 PC and one Cardputer ADV, operated by the user. The checks mostly cover what was listed as not verified above.
+
+**Version under test:** the firmware is **SDR-1.28** (shown on the diagnostics screen, the `BUILD_TAG` in the source, and the string embedded in the published `.ino.bin`; `SHA256SUMS.txt` matched for all four images). The PC-side program equals main `0227c59`: three files from the user's Windows PC were compared with main by SHA-256 and are identical: `mac/radiodays_sdr.py` (`d308ea88f443186a59781e60d306ba0d83d4defee035deee0947c5517dfd867f`), `mac/manager/app.js` (`4d5fd76c749506ba07b0063b698fa712407042aaa27bec56abff62350534998e`) and `mac/manager/radio/app.js` (`6ea10b59a346addb27e0ac24f072dfdb85f26d63e434cbe357d08f815399243e`). Other files (`platform_support.py`, `servers_store.py`, `receiver_manager.py`, `radio/wifi-toggle.js`, the `.bat` start files, ...) were not compared. During the session a version called "1.29" was mentioned by mistake; no such version exists. Everything here is SDR-1.28.
+
+**Method and limits:** numbers come from photos of the Cardputer diagnostics screen (`D` key); times come from the photos' EXIF data. The counters are cumulative since boot, so two photos were compared. Each measurement was made once and is not a statistical result. What the Cardputer sounded like is the user's own listening; reception was mostly noise, so sound quality was not compared.
+
+| What | How | Result |
+|---|---|---|
+| `OUT PC` / `OUT ADV` switching over USB alone (Wi-Fi OFF) | 10000 kHz AM, switched with the `O` key | **real**: with `OUT PC` only the PC speaker played, with `OUT ADV` only the Cardputer speaker played, and the other was silent (the user's listening; no diagnostics photo for this step) |
+| Web Controller `X` button on the device | USB connected, `X` pressed twice | **real**: the first press turned the Cardputer Wi-Fi ON (`WIFI` line green with dBm), the second turned it OFF (`0dBm`, red). After OFF, frequency changes with the jog dial were still followed by the Web Controller |
+| USB unplug and replug while the app runs (3 times) | Cardputer Wi-Fi OFF (USB only); remove and reinsert the cable | **real**: after unplugging, the Cardputer meter still moved with the jog dial for about 2 s while the Web Controller did not follow, then `MAC … not connected`, `OUT ADV waiting for PC`, `USB SOF-` (`m1` stayed, `dn` stayed 0). The Cardputer screen did not freeze. After reinserting, **all 3 times `CABLE ok` came back by itself within 1-2 s** (`up` increased) and the sound returned; no Cardputer restart was needed. This differs in outcome from the macOS record of 2026-10-27 (it did not always recover by itself; number of tries not recorded). One Windows PC, 3 tries only. The same measurements were not made on macOS, so the two OSes cannot be compared |
+| Wi-Fi-only operation without a USB host | turn Wi-Fi ON, then unplug USB | **real**: the diagnostics showed `MAC … Wi-Fi ok`, `OUT ADV playing`, `USB SOF-`. Jog operations started after a delay of a fraction of a second that was hardly noticeable (by feel, not measured). The sound seemed the same as from the PC (reception was mostly noise, so for reference only) |
+| Continuous run over USB alone (85 min 15 s) | Wi-Fi OFF, `OUT ADV`, `CABLE ok`, left alone; PC on mains power with sleep and screen-off disabled | **real**: USB never dropped (`up`/`dn` unchanged). Heap stayed flat (current 154628 to 154612; minimum 71724 and largest block 40948 unchanged). Audio frames were lost at a steady rate (see below) |
+| PC sleep and resume (once) | USB only, `OUT ADV`; the PC was put to sleep by hand and woken | **real**: the Cardputer sound resumed about 30 s after waking. Diagnostics showed `CABLE ok` and `USB up` 9 to 10 (USB re-enumerated). The KiwiSDR connection had been lost, so the PC program switched the receiver from `Ironstone AU` to `Rotorua NZ` by itself (it moves to the next receiver in the list after repeated failures). The time spent asleep was not recorded |
+
+**Change of the diagnostics counters (`OUT ADV` playing)**
+
+| Interval | Elapsed | Audio frames (rx) | Loss (gaps / lost) | Reconnects (reconn / disc) | Buffer (under / over / rebuf) | Heap (minimum / largest block) |
+|---|---|---|---|---|---|---|
+| Wi-Fi only | 337 s (5 min 37 s) | +3862 (about 98% of ideal) | 0 / 0 | **+2** / +2 | +8 / +15 / +8 | 100424 to 71724 / 65524 to 40948 |
+| USB only (short) | 526 s (8 min 46 s) | +18133 (about 98%) | +280 / +324 (about 1.8% of frames) | 0 / 0 | +33 / +26 / +33 (about 3.8 per minute) | 71724 / 40948 (unchanged) |
+| USB only (long) | 5115 s (85 min 15 s) | +174599 (about 97%) | +3913 / +4556 (about 2.5%) | 0 / 0 | +443 / +128 / +443 (about 5.2 per minute) | 71724 / 40948 (unchanged) |
+
+- Over Wi-Fi alone the audio TCP connection was re-established twice in 5 min 37 s (cause not investigated). The drop of the heap minimum is probably memory allocated during the reconnects (an inference).
+- Over USB alone there were no disconnects and the heap was stable, but about 2-2.5% of the audio frames were lost and the buffer ran short a few times per minute. The user (author) noticed no problem in the listening done, but that was a personal impression from short listening with mostly noise reception, and the 85-minute run was not listened to. Whether this is audible as clicks on a real broadcast was not checked. The cause was not investigated; an overflow of the PC-side audio queue is possible but unconfirmed.
+- This measurement cannot say which of the two paths is better.
+- The "ideal" rate is calculated from constants in the code (USB: a 2048-sample block sent as 384-sample chunks, about 35.1 chunks/s; Wi-Fi: 1024 samples per frame, about 11.7 frames/s).
+- `lost` rose from 9320 to 147029 between the Wi-Fi-only and the USB-only intervals; this is presumed to come from the audio sequence numbers jumping when switching from Wi-Fi to USB, not from sound actually lost.
+
+**Another observation:** on Windows 11 the `USB` line of the diagnostics showed `cdc0` (yellow) even while USB worked normally (`cdc1` on the Mac on 2026-10-27). The link itself was fine; it looks like an OS difference in the diagnostics display, not investigated.
+
+**Still not verified for SDR-1.28, including this section:** other Windows PCs, Python 3.9/3.10, runs of several hours or more, long Wi-Fi-only runs, other Wi-Fi setups, repeated sleep/wake attempts, whether the lost USB audio frames are audible on a real broadcast, the cause of the lost frames and of the Wi-Fi reconnects, the PC-side files not compared above, Linux and ChromeOS.
 
 ## Files
 

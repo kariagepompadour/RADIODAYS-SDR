@@ -234,7 +234,7 @@ esptool --chip esp32s3 --port /dev/cu.usbmodemXXXX write-flash 0x0 firmware/bin/
 | Receiver Manager: 保存と検証、原子的な保存・バックアップ・復元、壊れたファイルへの退避、HTTP のセキュリティ（Host/Origin/CSRF/サイズ）、競合検出、確認結果の文言、候補ファイルの形式 | **テスト済み**（自動テスト 26 件: 保存・セキュリティ 14 件 + 確認履歴・一括確認の上限・記録 12 件） |
 | Receiver Manager 画面のロジック（並べ替え、検証、送信内容、フィルタ、結果の文言） | **テスト済み**（Node テスト 15 件。日時の日本語/英語表記と一括実行の同時数の上限も含む） |
 | ライブ Web ラジオ: ページと画像、同期状態 API、操作命令 | **テスト済み**（自動テスト 3 件。ブラウザ表示と受信機切替も 2026-10-26 に手動確認） |
-| Cardputer USB制御プロトコルとUSB/HTTP共通の操作処理 | **2026年10月27日にSDR-1.28で実機確認済み**: macOS上でTinyUSBとして認識され、`CABLE ok` を確認し、CardputerのWi-FiをOFFにした状態でも動作を継続しました。Windows 11でも、PC側の修正（ポートを開くときにDTRを立てる）後に、`CABLE ok`、CardputerのWi-FiをOFFにした状態での選局、USBだけでの `OUT ADV` 音声を確認しました。動作中のUSB抜き差し後はCardputerの再起動が必要な場合があります。 |
+| Cardputer USB制御プロトコルとUSB/HTTP共通の操作処理 | **2026年10月27日にSDR-1.28で実機確認済み**: macOS上でTinyUSBとして認識され、`CABLE ok` を確認し、CardputerのWi-FiをOFFにした状態でも動作を継続しました。Windows 11でも、PC側の修正（ポートを開くときにDTRを立てる）後に、`CABLE ok`、CardputerのWi-FiをOFFにした状態での選局、USBだけでの `OUT ADV` 音声を確認しました。macOSでは、動作中のUSB抜き差し後は、2026年10月27日の記録では自動で戻らないことがあり、その場合はCardputerの再起動が必要でした（試行回数・自動復旧の回数は記録なし）。Windows 11（1台）では、2026年10月28〜29日に追加で、USB単独での `OUT PC`／`OUT ADV` の切り替え、Web Controllerの `X` ボタン、動作中のUSB抜き差し（3回とも1〜2秒で自動復帰し、音も戻りました）、USB単独での85分間の連続動作、PCのスリープ復帰（1回、約30秒で音が再開）を確認しました。作者個人の限られた試験（PC1台、各1回）では、USB単独の85分間で音声フレームの約2.5%が欠けました。作者が聞いた範囲では特に不具合は感じませんでしたが、雑音中心の受信での個人の印象にすぎず、明瞭な放送音声では未確認です。詳細は `docs/VERIFICATION_JA.md` の第22章です。 |
 | 動作中のプログラムに対するブラウザ画面の通し試験: 候補の選択、並べ替え、保存、動作中プログラムの `/servers` に新しい一覧が出ること、バックアップとファイルの書き出し | **テスト済み**（ブラウザでの手動操作、2026-10-24） |
 | 公開一覧の日本の候補への確認（2026-10-24、2 回）: HTTP 確認は 2 回とも 25 台中 23 台が応答（同じ 23 台とは限りません）。1 台（Adachi）で音声確認を実行し音声ブロックが届いた | **実機の KiwiSDR・ある時点の分**。他の時間については何も言えません |
 | 確認履歴がページの再読み込み後も表示される／HTTP と音声が別々に記録される／日本の候補 25 台の一括 HTTP 確認が同時 4 件以内で動く／画面を開いただけでは確認リクエストが出ない／操作ガイドが別タブで日本語・英語で開く | **テスト済み**（ブラウザ、2026-10-24） |
@@ -242,9 +242,9 @@ esptool --chip esp32s3 --port /dev/cu.usbmodemXXXX write-flash 0x0 firmware/bin/
 | ファームウェアのコンパイル。同じソースから `.ino` と `.bin` を作成。ブートローダーとパーティション表は前の版と同一 | **テスト済み**（arduino-cli のビルド成功） |
 | ファームウェアの描画ロジックと画面遷移を、実際のソースから PC 上で描画して検証（85 項目）、音声プロトコルと再生規則（host_tests） | **テスト済み**（PC 上のシミュレーション。実機ではありません） |
 | **Cardputer ADV 実機でのすべて**: 書き込み・起動・画面の見え方・5段状態表示・JST時計・キーとノブ・Wi-Fi・地球儀・**Receiver Managerで保存した一覧が地球儀に出ること**・AUTO選局・Cardputerスピーカー | **未検証**（作者が実機で確認します） |
-| **Windows 11**: PC 側プログラム全体を Windows で動かすこと（起動ファイル、Python の導入、音声出力、ファイアウォール、ブラウザの自動起動、Receiver Manager、Cardputer との通信） | **作者が 1 台の Windows 11 PC で確認**（Python 3.12.10、Cardputer ADV 実機）: 起動、ブラウザ、Receiver Manager、Cardputer との接続、音量・ミュート・出力先の切替、終了、2 回目の起動。**未検証:** 他の Windows PC、長時間の使用、Python 3.9 / 3.10、以前 1 回だけ起きた「Cardputer と無関係に PC から鳴る」現象の原因（再現せず） |
+| **Windows 11**: PC 側プログラム全体を Windows で動かすこと（起動ファイル、Python の導入、音声出力、ファイアウォール、ブラウザの自動起動、Receiver Manager、Cardputer との通信） | **作者が 1 台の Windows 11 PC で確認**（Python 3.12.10、Cardputer ADV 実機）: 起動、ブラウザ、Receiver Manager、Cardputer との接続、音量・ミュート・出力先の切替、終了、2 回目の起動。**未検証:** 他の Windows PC、数時間以上の長時間の使用（USB単独の85分間は確認）、Python 3.9 / 3.10、以前 1 回だけ起きた「Cardputer と無関係に PC から鳴る」現象の原因（再現せず） |
 | Linux | **未対応・未検証** |
-| 長時間動作、スリープ復帰、他の Wi-Fi 環境、他の Mac / macOS | **未検証** |
+| 数時間以上の長時間動作、Wi-Fi単独での長時間動作、スリープ復帰の複数回の試行、他の Wi-Fi 環境、他の Mac / macOS | **未検証**（Windows 11の1台で、USB単独の85分間の連続動作とスリープ復帰1回は確認。第22章） |
 
 詳細: [docs/VERIFICATION_JA.md](docs/VERIFICATION_JA.md)（全記録）と [docs/VERIFICATION.md](docs/VERIFICATION.md)（英語の要約）。
 
